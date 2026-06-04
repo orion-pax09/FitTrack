@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FitTrack – Dashboard</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="../../backend/config/fittrack-db.js"></script>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #080808;
+      --sidebar: #0b0b0b;
+      --surface: #111113;
+      --surface2: #18181b;
+      --border: #222226;
+      --border2: #2a2a2f;
+      --text: #f4f4f5;
+      --muted: #71717a;
+      --yellow: #fbbf24;
+      --yellow-dim: rgba(251, 191, 36, 0.12);
+      --green: #22c55e;
+      --blue: #60a5fa;
+      --red: #f87171;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      overflow-x: hidden;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 24px 16px;
+      z-index: 100;
+    }
+
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 8px;
+      margin-bottom: 32px;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--yellow);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .logo-text {
+      font-family: 'Syne', sans-serif;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 2px;
+    }
+
+    .logo-text span {
+      color: var(--yellow);
+    }
+
+    .logo-sub {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    .menu {
+      list-style: none;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .menu li {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 14px;
+      border-radius: 10px;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13.5px;
+      font-weight: 500;
+      transition: all .2s;
+    }
+
+    .menu li:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .menu li.active {
+      background: var(--yellow);
+      color: #000;
+      font-weight: 700;
+    }
+
+    .menu li .icon {
+      font-size: 15px;
+      width: 18px;
+      text-align: center;
+    }
+
+    .trainer-box {
+      margin-top: auto;
+      background: #1a1500;
+      border: 1px solid rgba(251, 191, 36, 0.2);
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    .trainer-box .label {
+      font-size: 10px;
+      color: var(--yellow);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+
+    .trainer-box .name {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    /* MAIN */
+    .main {
+      margin-left: 260px;
+      flex: 1;
+      padding: 32px 28px;
+      overflow-y: auto;
+    }
+
+    .logout-btn {
+      position: fixed;
+      top: 16px;
+      right: 20px;
+      background: var(--yellow);
+      color: #000;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 9px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      z-index: 200;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    /* WELCOME */
+    .welcome-banner {
+      background: linear-gradient(135deg, #1a1200, #0f0a00);
+      border: 1px solid rgba(251, 191, 36, 0.25);
+      border-radius: 16px;
+      padding: 24px 28px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .welcome-banner h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .welcome-banner p {
+      color: var(--muted);
+      font-size: .88rem;
+    }
+
+    .welcome-banner .emoji {
+      font-size: 3rem;
+    }
+
+    /* STAT CARDS */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media(max-width:1100px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+      transition: border-color .2s;
+      animation: fadeUp .4s ease both;
+    }
+
+    .stat-card.yellow {
+      background: linear-gradient(135deg, #fbbf24, #d97706);
+      border: none;
+      color: #000;
+    }
+
+    .sc-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .sc-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      background: var(--yellow-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+    }
+
+    .stat-card.yellow .sc-icon {
+      background: rgba(0, 0, 0, 0.15);
+    }
+
+    .sc-badge {
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .sc-badge.up {
+      color: var(--green);
+    }
+
+    .sc-badge.down {
+      color: var(--red);
+    }
+
+    .sc-badge.norm {
+      color: var(--muted);
+    }
+
+    .sc-badge.dark {
+      color: rgba(0, 0, 0, 0.5);
+    }
+
+    .sc-val {
+      font-family: 'Syne', sans-serif;
+      font-size: 2.1rem;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .sc-label {
+      font-size: .8rem;
+      color: var(--muted);
+    }
+
+    .stat-card.yellow .sc-label {
+      color: rgba(0, 0, 0, 0.55);
+    }
+
+    .cal-bar-track {
+      margin-top: 10px;
+      height: 6px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .cal-bar-fill {
+      height: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 99px;
+      transition: width .5s ease;
+    }
+
+    /* CHARTS */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+
+    @media(max-width:900px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+    }
+
+    .chart-card h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    /* LOG WORKOUT */
+    .log-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .log-section h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 18px;
+    }
+
+    .log-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    @media(max-width:900px) {
+      .log-form {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .log-form label {
+      display: block;
+      font-size: .78rem;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+
+    .log-form input,
+    .log-form select {
+      width: 100%;
+      background: #09090b;
+      border: 1px solid var(--border2);
+      border-radius: 9px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: .88rem;
+      font-family: 'DM Sans', sans-serif;
+      outline: none;
+      transition: border .2s;
+    }
+
+    .log-form input:focus,
+    .log-form select:focus {
+      border-color: var(--yellow);
+    }
+
+    .log-form select option {
+      background: #111;
+    }
+
+    .log-btn {
+      background: var(--yellow);
+      color: #000;
+      font-weight: 700;
+      font-size: .88rem;
+      border: none;
+      border-radius: 9px;
+      padding: 10px 20px;
+      cursor: pointer;
+      white-space: nowrap;
+      font-family: 'DM Sans', sans-serif;
+      transition: opacity .2s;
+    }
+
+    .log-btn:hover {
+      opacity: .85;
+    }
+
+    .log-success {
+      display: none;
+      color: var(--green);
+      font-size: .82rem;
+      margin-top: 10px;
+      font-weight: 600;
+    }
+
+    .log-success.show {
+      display: block;
+    }
+
+    /* WORKOUT SUGGESTIONS */
+    .workout-banner {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px 24px;
+      margin-bottom: 24px;
+    }
+
+    .workout-banner-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .workout-banner-head h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .badge-new {
+      background: var(--yellow);
+      color: #000;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 99px;
+    }
+
+    .workout-item {
+      background: #09090b;
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .wi-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--yellow);
+      flex-shrink: 0;
+    }
+
+    .wi-text {
+      flex: 1;
+    }
+
+    .wi-text strong {
+      display: block;
+      font-size: .9rem;
+      margin-bottom: 2px;
+    }
+
+    .wi-text span {
+      font-size: .78rem;
+      color: var(--muted);
+    }
+
+    .wi-tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 99px;
+      background: var(--yellow-dim);
+      color: var(--yellow);
+    }
+
+    .no-workout {
+      color: var(--muted);
+      font-size: .88rem;
+      padding: 10px 0;
+    }
+
+    /* QUICK ACCESS */
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media(max-width:900px) {
+      .quick-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .quick-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px;
+      cursor: pointer;
+      transition: all .2s;
+    }
+
+    .quick-card:hover {
+      border-color: var(--yellow);
+      transform: translateY(-2px);
+    }
+
+    .quick-card.gold {
+      background: linear-gradient(135deg, #fbbf24, #d97706);
+      border: none;
+      color: #000;
+    }
+
+    .quick-card .qc-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: var(--yellow-dim);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-bottom: 14px;
+    }
+
+    .quick-card.gold .qc-icon {
+      background: rgba(0, 0, 0, 0.12);
+    }
+
+    .quick-card h4 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .quick-card p {
+      font-size: .8rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .quick-card.gold p {
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(16px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    .stat-card:nth-child(1) {
+      animation-delay: .05s
+    }
+
+    .stat-card:nth-child(2) {
+      animation-delay: .1s
+    }
+
+    .stat-card:nth-child(3) {
+      animation-delay: .15s
+    }
+
+    .stat-card:nth-child(4) {
+      animation-delay: .2s
+    }
+
+    /* MY WORKOUT PLAN */
+    .plan-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .plan-section h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .plan-section .plan-sub {
+      font-size: .82rem;
+      color: var(--muted);
+      margin-bottom: 18px;
+    }
+    .plan-day-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .plan-day-tab {
+      padding: 7px 16px;
+      border-radius: 99px;
+      border: 1px solid var(--border2);
+      background: transparent;
+      color: var(--muted);
+      font-size: .8rem;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      transition: all .2s;
+    }
+    .plan-day-tab:hover { border-color: #555; color: var(--text); }
+    .plan-day-tab.active { background: var(--yellow); border-color: var(--yellow); color: #000; font-weight: 700; }
+    .plan-day-panel { display: none; }
+    .plan-day-panel.active { display: block; }
+
+    .plan-exercise {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      background: #09090b;
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      transition: all .25s;
+      cursor: pointer;
+    }
+    .plan-exercise:hover { border-color: #444; }
+    .plan-exercise.completed {
+      border-color: rgba(34, 197, 94, 0.3);
+      background: rgba(34, 197, 94, 0.04);
+    }
+    .plan-exercise .ex-check {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 13px;
+      transition: all .25s;
+      color: transparent;
+    }
+    .plan-exercise.completed .ex-check {
+      border-color: var(--green);
+      background: var(--green);
+      color: #000;
+    }
+    .plan-exercise .ex-details { flex: 1; }
+    .plan-exercise .ex-name {
+      font-size: .9rem;
+      font-weight: 600;
+      transition: all .2s;
+    }
+    .plan-exercise.completed .ex-name {
+      text-decoration: line-through;
+      color: var(--muted);
+    }
+    .plan-exercise .ex-meta {
+      font-size: .78rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .plan-exercise .ex-tag {
+      font-size: .72rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 99px;
+      background: var(--yellow-dim);
+      color: var(--yellow);
+      flex-shrink: 0;
+    }
+    .plan-exercise.completed .ex-tag {
+      background: rgba(34,197,94,.12);
+      color: var(--green);
+    }
+    .plan-progress-bar {
+      margin-top: 12px;
+      height: 6px;
+      background: var(--surface2);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .plan-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--yellow), var(--green));
+      border-radius: 99px;
+      transition: width .5s ease;
+    }
+    .plan-progress-text {
+      font-size: .78rem;
+      color: var(--muted);
+      margin-top: 6px;
+      text-align: right;
+    }
+    .no-plan {
+      color: var(--muted);
+      font-size: .88rem;
+      padding: 16px 0;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+  <button class="logout-btn" onclick="FitTrackDB.logout()">Logout</button>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="logo-wrap">
+      <div class="logo-icon">🏋️</div>
+      <div>
+        <div class="logo-text">FIT<span>TRACK</span></div>
+        <div class="logo-sub">FITNESS PORTAL</div>
+      </div>
+    </div>
+    <ul class="menu">
+      <li class="active"><span class="icon">🏠</span> Dashboard</li>
+      <li onclick="location.href='bmi-calculator.html'"><span class="icon">📊</span> BMI Calculator</li>
+      <li onclick="location.href='nutrition.html'"><span class="icon">🥗</span> Nutrition</li>
+      <li onclick="location.href='progress.html'"><span class="icon">📈</span> Progress</li>
+      <li onclick="location.href = 'chat.html' "><span class="icon">💬</span> Trainer Chat</li>
+      <li onclick="location.href='exercise-library.html'"><span class="icon">🏃</span> Exercise Library</li>
+      <li onclick="location.href='membership.html'"><span class="icon">🏅</span> Membership</li>
+      <li><span class="icon">📋</span> Workout History</li>
+    </ul>
+    <div class="trainer-box" id="trainerBox" style="display:none">
+      <div class="label">⚡ Your Trainer</div>
+      <div class="name" id="trainerName"></div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="welcome-banner">
+      <div>
+        <h2>Welcome back, <span id="userName">Athlete</span>! 👋</h2>
+        <p>Here's your fitness overview for today — keep pushing!</p>
+      </div>
+      <div class="emoji">🔥</div>
+    </div>
+
+    <!-- GOALS -->
+    <div class="log-section">
+      <div class="workout-banner-head" style="margin-bottom: 12px;">
+        <h3 style="margin-bottom:0">🎯 My Fitness Goals</h3>
+      </div>
+      <div class="log-form" style="grid-template-columns: 1fr 1fr 1fr auto;">
+        <div>
+          <label>Metric</label>
+          <select id="gMetric" onchange="updateCurrentGoalDisplay()">
+            <option value="weight">Weight (kg)</option>
+            <option value="bmi">BMI</option>
+          </select>
+        </div>
+        <div>
+          <label>Target Value</label>
+          <input type="number" id="gTarget" placeholder="e.g. 70" step="0.1" />
+        </div>
+        <div>
+          <label>Current Goal</label>
+          <input type="text" id="gCurrent" placeholder="Loading..." disabled style="background:#18181b;" />
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button class="log-btn" onclick="saveGoal()">Set Goal</button>
+        </div>
+      </div>
+      <div class="log-success" id="goalSuccess">✅ Goal updated successfully!</div>
+    </div>
+
+    <!-- STAT CARDS — all updated by refreshDashboard() -->
+    <div class="stats-grid">
+      <div class="stat-card yellow">
+        <div class="sc-top">
+          <div class="sc-icon">🔥</div><span class="sc-badge dark">Today</span>
+        </div>
+        <div class="sc-val" id="calToday">0</div>
+        <div class="sc-label">Calories Consumed</div>
+        <div class="cal-bar-track">
+          <div class="cal-bar-fill" id="calBar" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="sc-icon">🎯</div><span class="sc-badge up" id="weeklyBurnBadge">+0%</span>
+        </div>
+        <div class="sc-val" id="weeklyBurn">0</div>
+        <div class="sc-label">Calories Burned (Week)</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="sc-icon">⚖️</div><span class="sc-badge norm" id="bmiLabel">—</span>
+        </div>
+        <div class="sc-val" id="bmiVal">—</div>
+        <div class="sc-label">BMI Index</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="sc-icon">📈</div><span class="sc-badge" id="weightChangeBadge">—</span>
+        </div>
+        <div class="sc-val" id="currentWeight">—</div>
+        <div class="sc-label">Current Weight</div>
+      </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>🔥 Weekly Calories Burned</h3>
+        <canvas id="caloriesChart" height="220"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>⏱️ Workout Duration (min)</h3>
+        <canvas id="durationChart" height="220"></canvas>
+      </div>
+    </div>
+
+    <!-- LOG A WORKOUT (feeds the charts directly) -->
+    <div class="log-section">
+      <h3>➕ Log Today's Workout</h3>
+      <div class="log-form">
+        <div>
+          <label>Workout name</label>
+          <input type="text" id="wName" placeholder="e.g. Morning Run" />
+        </div>
+        <div>
+          <label>Duration (min)</label>
+          <input type="number" id="wDur" placeholder="45" min="1" max="300" />
+        </div>
+        <div>
+          <label>Calories burned</label>
+          <input type="number" id="wCal" placeholder="350" min="1" />
+        </div>
+        <div>
+          <label>Intensity</label>
+          <select id="wInt">
+            <option>Low</option>
+            <option selected>Medium</option>
+            <option>High</option>
+          </select>
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button class="log-btn" onclick="logWorkout()">Log Workout</button>
+        </div>
+      </div>
+      <div class="log-success" id="logSuccess">✅ Workout logged! Charts updated.</div>
+    </div>
+
+    <!-- MY WORKOUT PLAN (assigned by trainer) -->
+    <div class="plan-section" id="myPlanSection">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <h3>📋 My Workout Plan</h3>
+        <span id="planName" style="font-size:.82rem;color:var(--yellow);font-weight:600;"></span>
+      </div>
+      <div class="plan-sub" id="planInfo">Loading your workout plan...</div>
+      <div class="plan-day-tabs" id="planDayTabs"></div>
+      <div id="planDayPanels"></div>
+      <div class="plan-progress-bar" id="planProgressBar" style="display:none;"><div class="plan-progress-fill" id="planProgressFill" style="width:0%"></div></div>
+      <div class="plan-progress-text" id="planProgressText" style="display:none;"></div>
+    </div>
+
+    <!-- WORKOUT SUGGESTIONS -->
+    <div class="workout-banner">
+      <div class="workout-banner-head">
+        <h3>💪 Workout Suggestions from Your Trainer</h3>
+        <span class="badge-new" id="newBadge" style="display:none">NEW</span>
+      </div>
+      <div id="workoutList">
+        <p class="no-workout">No workout suggestions yet — your trainer will add some soon!</p>
+      </div>
+    </div>
+
+    <!-- QUICK ACCESS -->
+    <h2 style="font-family:'Syne',sans-serif;font-size:1.2rem;font-weight:700;margin-bottom:16px;">⚡ Quick Access</h2>
+    <div class="quick-grid">
+      <div class="quick-card gold" onclick="location.href='nutrition.html'">
+        <div class="qc-icon">🥗</div>
+        <h4>Nutrition Tracking</h4>
+        <p>Log meals and track your daily macronutrients</p>
+      </div>
+      <div class="quick-card" onclick="location.href='bmi-calculator.html'">
+        <div class="qc-icon">📊</div>
+        <h4>BMI Calculator</h4>
+        <p>Check your body mass index and health insights</p>
+      </div>
+      <div class="quick-card" onclick="location.href='progress.html'">
+        <div class="qc-icon">📈</div>
+        <h4>Progress Reports</h4>
+        <p>Detailed analytics of your fitness journey</p>
+      </div>
+      <div class="quick-card" onclick="goToChat()">
+        <div class="qc-icon">💬</div>
+        <h4>Trainer Chat</h4>
+        <p>Message your assigned trainer anytime</p>
+      </div>
+      <div class="quick-card" onclick="location.href='exercise-library.html'">
+        <div class="qc-icon">🏃</div>
+        <h4>Exercise Library</h4>
+        <p>Browse exercises and workout techniques</p>
+      </div>
+      <div class="quick-card" onclick="location.href='membership.html'">
+        <div class="qc-icon">🏅</div>
+        <h4>Membership</h4>
+        <p>View and manage your gym membership plan</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Auth ───────────────────────────────────────────────────────
+    const session = FitTrackDB.requireClient();
+    document.getElementById("userName").textContent = session.firstname || "Athlete";
+    if (session.assignedTrainerName) {
+      document.getElementById("trainerBox").style.display = "block";
+      document.getElementById("trainerName").textContent = session.assignedTrainerName;
+    }
+    function goToChat() {
+      if (!session.assignedTrainerId) { alert("You are not assigned to a trainer yet."); return; }
+      location.href = "chat.html";
+    }
+
+    // ── Chart setup ────────────────────────────────────────────────
+    const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const ctOpts = (color) => ({
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: "#18181b", titleColor: "#fafafa", bodyColor: "#a1a1aa", borderColor: "#27272a", borderWidth: 1, cornerRadius: 8, padding: 10 } },
+      scales: {
+        x: { grid: { color: "#1e1e22" }, ticks: { color: "#71717a" } },
+        y: { grid: { color: "#1e1e22" }, ticks: { color: "#71717a" } }
+      }
+    });
+
+    const calChart = new Chart(document.getElementById("caloriesChart"), {
+      type: "line",
+      data: { labels: DAYS, datasets: [{ data: [0, 0, 0, 0, 0, 0, 0], borderColor: "#fbbf24", backgroundColor: "rgba(251,191,36,0.08)", borderWidth: 2.5, pointBackgroundColor: "#fbbf24", pointRadius: 4, tension: 0.4, fill: true }] },
+      options: ctOpts("#fbbf24")
+    });
+
+    const durChart = new Chart(document.getElementById("durationChart"), {
+      type: "bar",
+      data: { labels: DAYS, datasets: [{ data: [0, 0, 0, 0, 0, 0, 0], backgroundColor: "rgba(251,191,36,0.75)", borderRadius: 8, borderSkipped: false }] },
+      options: ctOpts("#fbbf24")
+    });
+
+    // ── Refresh all dashboard data ─────────────────────────────────
+    async function refreshDashboard() {
+      // 1. Calories consumed today
+      const todayMeals = await FitTrackDB.getTodayMeals();
+      const calSum = todayMeals.reduce((acc, m) => acc + (m.calories || 0), 0);
+      const goal = 2500;
+      const pct = Math.min(Math.round(calSum / goal * 100), 100);
+      document.getElementById("calToday").textContent = calSum.toLocaleString();
+      document.getElementById("calBar").style.width = pct + "%";
+
+      // 2. Weekly calories burned + charts
+      const burn = await FitTrackDB.getWeeklyBurn();
+      document.getElementById("weeklyBurn").textContent = burn.total.toLocaleString();
+      calChart.data.datasets[0].data = [...burn.byDay];
+      durChart.data.datasets[0].data = [...burn.byDayDuration];
+      calChart.update();
+      durChart.update();
+
+      // 3. BMI
+      const bmiData = await FitTrackDB.getLatestBmi();
+      if (bmiData) {
+        document.getElementById("bmiVal").textContent = bmiData.bmi;
+        document.getElementById("bmiLabel").textContent = bmiData.category;
+      }
+
+      // 4. Current weight
+      const wData = await FitTrackDB.getLatestWeight();
+      if (wData && wData.kg) {
+        document.getElementById("currentWeight").textContent = wData.kg + "kg";
+        const badge = document.getElementById("weightChangeBadge");
+        if (wData.change !== null) {
+          badge.textContent = (wData.change > 0 ? "+" : "") + wData.change + "kg";
+          badge.className = "sc-badge " + (wData.change <= 0 ? "up" : "down");
+        }
+      }
+
+      // 5. Trainer workout suggestions
+      await loadSuggestions();
+
+      // 6. Client Goals
+      await loadGoals();
+
+      // 7. My Workout Plan
+      await loadMyPlan();
+    }
+
+    async function loadSuggestions() {
+      const container = document.getElementById("workoutList");
+      const API_URL = "http://localhost:3000/api";
+      const _headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + localStorage.getItem("fittrack_token")
+      };
+      
+      try {
+        const res = await fetch(`${API_URL}/workouts`, { headers: _headers });
+        if (!res.ok) throw new Error("Failed to load");
+        const mine = await res.json();
+        
+        if (!mine.length) {
+          container.innerHTML = '<p class="no-workout">No workout suggestions yet — your trainer will add some soon!</p>';
+          return;
+        }
+        
+        const recent = mine.some(w => Date.now() - new Date(w.createdAt).getTime() < 86400000);
+        if (recent) document.getElementById("newBadge").style.display = "inline";
+        
+        container.innerHTML = mine.map(w => `
+    <div class="workout-item">
+      <div class="wi-dot"></div>
+      <div class="wi-text">
+        <strong>${w.title}</strong>
+        ${w.description ? `<span>${w.description.replace(/\n/g, '<br>')}</span>` : ''}
+      </div>
+      <span class="wi-tag">${w.type || "General"}</span>
+    </div>`).join("");
+      } catch (err) {
+        console.error("loadSuggestions error:", err);
+        container.innerHTML = '<p class="no-workout">Could not load suggestions.</p>';
+      }
+    }
+
+    // ── Log a workout ──────────────────────────────────────────────
+    async function logWorkout() {
+      const name = document.getElementById("wName").value.trim();
+      const dur = parseInt(document.getElementById("wDur").value) || 0;
+      const cal = parseInt(document.getElementById("wCal").value) || 0;
+      if (!name || (!dur && !cal)) { alert("Please enter at least a workout name and duration or calories."); return; }
+
+      try {
+        await FitTrackDB.logWorkout({
+          title: name,
+          duration_min: dur,
+          calories_burned: cal
+        });
+
+        document.getElementById("wName").value = "";
+        document.getElementById("wDur").value = "";
+        document.getElementById("wCal").value = "";
+
+        const s = document.getElementById("logSuccess");
+        s.classList.add("show");
+        setTimeout(() => s.classList.remove("show"), 3000);
+
+        // Refresh charts with new data
+        refreshDashboard();
+      } catch(err) {
+        console.error(err);
+        alert("Failed to log workout. Please try again.");
+      }
+    }
+
+    // ── Goals ──────────────────────────────────────────────────────
+    let userGoals = [];
+    async function loadGoals() {
+      userGoals = await FitTrackDB.getGoals(session.id);
+      updateCurrentGoalDisplay();
+    }
+    
+    function updateCurrentGoalDisplay() {
+      const metric = document.getElementById("gMetric").value;
+      const goal = userGoals.find(g => g.metric === metric);
+      const display = document.getElementById("gCurrent");
+      if (goal) {
+        display.value = goal.target_value + (metric === 'weight' ? ' kg' : '');
+      } else {
+        display.value = "Not set";
+      }
+    }
+
+    async function saveGoal() {
+      const metric = document.getElementById("gMetric").value;
+      const target = parseFloat(document.getElementById("gTarget").value);
+      if (!metric || isNaN(target)) { alert("Please enter a valid target."); return; }
+      
+      try {
+        await FitTrackDB.setGoal(metric, target);
+        const s = document.getElementById("goalSuccess");
+        s.classList.add("show");
+        setTimeout(() => s.classList.remove("show"), 3000);
+        document.getElementById("gTarget").value = "";
+        await loadGoals();
+      } catch (err) {
+        console.error(err);
+        alert("Failed to save goal.");
+      }
+    }
+
+    // ── My Workout Plan ───────────────────────────────────────────
+    let myPlanData = null;
+    let activePlanDay = null;
+    const PLAN_DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+
+    async function loadMyPlan() {
+      const API_URL = "http://localhost:3000/api";
+      const _headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + localStorage.getItem("fittrack_token")
+      };
+
+      try {
+        const res = await fetch(`${API_URL}/workout-plans/my-plan`, { headers: _headers });
+        if (!res.ok) throw new Error("Failed");
+        myPlanData = await res.json();
+
+        if (!myPlanData) {
+          document.getElementById("planInfo").textContent = "No workout plan assigned yet — your trainer will create one soon!";
+          document.getElementById("planDayTabs").innerHTML = "";
+          document.getElementById("planDayPanels").innerHTML = "";
+          document.getElementById("planProgressBar").style.display = "none";
+          document.getElementById("planProgressText").style.display = "none";
+          document.getElementById("planName").textContent = "";
+          return;
+        }
+
+        document.getElementById("planName").textContent = myPlanData.planName;
+        document.getElementById("planInfo").textContent = "Assigned by " + myPlanData.trainerName + " · " + new Date(myPlanData.createdAt).toLocaleDateString();
+
+        // Group exercises by day
+        const byDay = {};
+        (myPlanData.exercises || []).forEach(ex => {
+          if (!byDay[ex.day_of_week]) byDay[ex.day_of_week] = [];
+          byDay[ex.day_of_week].push(ex);
+        });
+
+        // Find today's day name
+        const todayName = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date().getDay()];
+        const availableDays = PLAN_DAYS.filter(d => byDay[d] && byDay[d].length > 0);
+
+        if (!activePlanDay || !availableDays.includes(activePlanDay)) {
+          activePlanDay = availableDays.includes(todayName) ? todayName : (availableDays[0] || "Monday");
+        }
+
+        // Render day tabs
+        document.getElementById("planDayTabs").innerHTML = availableDays.map(day => {
+          const exercises = byDay[day] || [];
+          const done = exercises.filter(e => e.is_completed).length;
+          const total = exercises.length;
+          const label = day.substring(0,3) + (total > 0 ? ` (${done}/${total})` : '');
+          return `<button class="plan-day-tab ${day === activePlanDay ? 'active' : ''}" onclick="switchPlanDay('${day}')">${label}</button>`;
+        }).join("");
+
+        // Render panels
+        document.getElementById("planDayPanels").innerHTML = availableDays.map(day => {
+          const exercises = byDay[day] || [];
+          const rows = exercises.map(ex => {
+            const completed = ex.is_completed ? 'completed' : '';
+            const meta = [ex.sets ? ex.sets + ' sets' : '', ex.reps ? ex.reps + ' reps' : '', ex.notes || ''].filter(Boolean).join(' · ');
+            return `
+            <div class="plan-exercise ${completed}" id="ex-${ex.id}" onclick="toggleComplete(${ex.id})">
+              <div class="ex-check">${ex.is_completed ? '✓' : ''}</div>
+              <div class="ex-details">
+                <div class="ex-name">${ex.exercise_name}</div>
+                ${meta ? `<div class="ex-meta">${meta}</div>` : ''}
+              </div>
+              <span class="ex-tag">${ex.is_completed ? 'Done' : 'Pending'}</span>
+            </div>`;
+          }).join("");
+          return `<div class="plan-day-panel ${day === activePlanDay ? 'active' : ''}" id="plan-panel-${day}">${rows}</div>`;
+        }).join("");
+
+        // Progress bar
+        const totalEx = myPlanData.exercises.length;
+        const doneEx = myPlanData.exercises.filter(e => e.is_completed).length;
+        if (totalEx > 0) {
+          const pct = Math.round((doneEx / totalEx) * 100);
+          document.getElementById("planProgressBar").style.display = "block";
+          document.getElementById("planProgressFill").style.width = pct + "%";
+          document.getElementById("planProgressText").style.display = "block";
+          document.getElementById("planProgressText").textContent = `${doneEx}/${totalEx} exercises completed (${pct}%)`;
+        }
+
+      } catch (err) {
+        console.error("loadMyPlan error:", err);
+        document.getElementById("planInfo").textContent = "No workout plan assigned yet — your trainer will create one soon!";
+      }
+    }
+
+    function switchPlanDay(day) {
+      activePlanDay = day;
+      document.querySelectorAll(".plan-day-tab").forEach(t => t.classList.toggle("active", t.textContent.trim().startsWith(day.substring(0,3))));
+      document.querySelectorAll(".plan-day-panel").forEach(p => p.classList.toggle("active", p.id === "plan-panel-" + day));
+    }
+
+    async function toggleComplete(exerciseId) {
+      const API_URL = "http://localhost:3000/api";
+      const _headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + localStorage.getItem("fittrack_token")
+      };
+
+      try {
+        const res = await fetch(`${API_URL}/workout-plans/exercises/${exerciseId}/complete`, {
+          method: "PATCH",
+          headers: _headers
+        });
+        if (!res.ok) throw new Error("Failed");
+
+        // Reload the plan to reflect changes
+        await loadMyPlan();
+      } catch(err) {
+        console.error("toggleComplete error:", err);
+        alert("Failed to update. Please try again.");
+      }
+    }
+
+    // ── React to updates from other pages ─────────────────────────
+    window.addEventListener("fittrack:update", refreshDashboard);
+
+    // ── Initial load ───────────────────────────────────────────────
+    refreshDashboard();
+  </script>
+</body>
+
+</html>

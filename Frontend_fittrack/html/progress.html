@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FitTrack – Progress</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="../../backend/config/fittrack-db.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    :root {
+      --bg:#080808; --sidebar:#0b0b0b; --surface:#111113; --surface2:#18181b;
+      --border:#222226; --border2:#2a2a2f; --text:#f4f4f5; --muted:#71717a;
+      --yellow:#fbbf24; --yellow-dim:rgba(251,191,36,0.12);
+      --green:#22c55e; --green-dim:rgba(34,197,94,0.12);
+      --blue:#60a5fa; --red:#f87171; --red-dim:rgba(248,113,113,0.12);
+    }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; overflow-x:hidden; }
+
+    /* SIDEBAR */
+    .sidebar { position:fixed; left:0; top:0; width:260px; height:100vh; background:var(--sidebar); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:24px 16px; z-index:100; }
+    .logo-wrap { display:flex; align-items:center; gap:12px; padding:0 8px; margin-bottom:32px; }
+    .logo-icon { width:40px; height:40px; background:var(--yellow); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+    .logo-text { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; letter-spacing:2px; }
+    .logo-text span { color:var(--yellow); }
+    .logo-sub { font-size:10px; color:var(--muted); letter-spacing:1px; }
+    .menu { list-style:none; flex:1; display:flex; flex-direction:column; gap:4px; }
+    .menu li { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:10px; color:var(--muted); cursor:pointer; font-size:13.5px; font-weight:500; transition:all .2s; }
+    .menu li:hover { background:var(--surface2); color:var(--text); }
+    .menu li.active { background:var(--yellow); color:#000; font-weight:700; }
+    .menu li .icon { font-size:15px; width:18px; text-align:center; }
+    .trainer-box { margin-top:auto; background:#1a1500; border:1px solid rgba(251,191,36,0.2); border-radius:12px; padding:14px; }
+    .trainer-box .label { font-size:10px; color:var(--yellow); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+    .trainer-box .name  { font-size:14px; font-weight:700; }
+
+    /* MAIN */
+    .main { margin-left:260px; flex:1; padding:32px 28px; overflow-y:auto; }
+    .logout-btn { position:fixed; top:16px; right:20px; background:var(--yellow); color:#000; font-weight:700; font-size:13px; padding:9px 20px; border-radius:8px; border:none; cursor:pointer; z-index:200; font-family:'DM Sans',sans-serif; }
+    .page-header { margin-bottom:28px; }
+    .page-header h1 { font-family:'Syne',sans-serif; font-size:2rem; font-weight:800; margin-bottom:4px; }
+    .page-header p  { color:var(--muted); font-size:.9rem; }
+
+    /* STAT CARDS */
+    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+    @media(max-width:1100px){ .stats-grid{ grid-template-columns:repeat(2,1fr); } }
+    .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:22px; animation:fadeUp .4s ease both; }
+    .stat-card.yellow { background:linear-gradient(135deg,#fbbf24,#d97706); border:none; color:#000; }
+    .sc-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    .sc-icon { width:38px; height:38px; border-radius:9px; background:var(--yellow-dim); display:flex; align-items:center; justify-content:center; font-size:17px; }
+    .stat-card.yellow .sc-icon { background:rgba(0,0,0,.15); }
+    .sc-badge { font-size:12px; font-weight:700; }
+    .sc-badge.green  { color:var(--green); }
+    .sc-badge.red    { color:var(--red); }
+    .sc-badge.yellow-t { color:var(--yellow); }
+    .sc-badge.dark   { color:rgba(0,0,0,.5); }
+    .sc-val { font-family:'Syne',sans-serif; font-size:2.1rem; font-weight:800; line-height:1; margin-bottom:4px; }
+    .sc-label { font-size:.8rem; color:var(--muted); }
+    .stat-card.yellow .sc-label { color:rgba(0,0,0,.55); }
+
+    /* CHARTS */
+    .charts-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:24px; }
+    @media(max-width:900px){ .charts-2{ grid-template-columns:1fr; } }
+    .chart-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:24px; animation:fadeUp .45s ease both; }
+    .chart-card-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+    .chart-card-head h3 { font-family:'Syne',sans-serif; font-size:1.05rem; font-weight:700; }
+    .trend-badge { display:flex; align-items:center; gap:5px; font-size:12px; font-weight:700; }
+    .trend-badge.up   { color:var(--green); }
+    .trend-badge.down { color:var(--red); }
+
+    /* WEIGHT LOG */
+    .weight-section { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:24px; margin-bottom:24px; }
+    .weight-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+    .weight-head h3 { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:700; }
+    .add-weight-form { display:flex; gap:10px; margin-bottom:20px; }
+    .add-weight-form input { flex:1; background:#09090b; border:1px solid var(--border2); border-radius:9px; padding:10px 14px; color:var(--text); font-size:14px; font-family:'DM Sans',sans-serif; outline:none; transition:border .2s; }
+    .add-weight-form input:focus { border-color:var(--yellow); }
+    .add-weight-form input::placeholder { color:var(--muted); }
+    .add-btn { background:var(--yellow); color:#000; font-weight:700; font-size:13px; border:none; border-radius:9px; padding:10px 20px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:opacity .2s; }
+    .add-btn:hover { opacity:.85; }
+    .weight-log-list { display:flex; flex-direction:column; gap:10px; }
+    .weight-log-item { background:#09090b; border:1px solid var(--border); border-radius:10px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; }
+    .wli-left { display:flex; align-items:center; gap:14px; }
+    .wli-dot  { width:10px; height:10px; border-radius:50%; background:var(--yellow); flex-shrink:0; }
+    .wli-date { font-size:.82rem; color:var(--muted); }
+    .wli-kg   { font-family:'Syne',sans-serif; font-size:1.2rem; font-weight:800; }
+    .wli-change { font-size:.8rem; font-weight:700; }
+    .wli-change.down { color:var(--green); }
+    .wli-change.up   { color:var(--red); }
+    .no-log { color:var(--muted); font-size:.88rem; }
+
+    /* BMI HISTORY */
+    .bmi-section { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:24px; margin-bottom:24px; }
+    .bmi-section h3 { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:700; margin-bottom:18px; }
+    .bmi-log-item { background:#09090b; border:1px solid var(--border); border-radius:10px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .bmi-num  { font-family:'Syne',sans-serif; font-size:1.3rem; font-weight:800; }
+    .bmi-date { font-size:.78rem; color:var(--muted); }
+
+    /* ACHIEVEMENTS */
+    .achievements-section { background:linear-gradient(135deg,rgba(251,191,36,.08),rgba(217,119,6,.08)); border:1px solid rgba(251,191,36,.2); border-radius:14px; padding:26px; margin-bottom:24px; }
+    .ach-head { display:flex; align-items:center; gap:14px; margin-bottom:20px; }
+    .ach-icon { width:44px; height:44px; background:var(--yellow); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+    .ach-head h3 { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:700; }
+    .ach-head p  { font-size:.8rem; color:var(--muted); margin-top:2px; }
+    .ach-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+    @media(max-width:700px){ .ach-grid{ grid-template-columns:1fr; } }
+    .ach-card { background:rgba(0,0,0,.3); border:1px solid var(--border2); border-radius:10px; padding:16px; }
+    .ach-badge { width:40px; height:40px; background:var(--yellow); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px; margin-bottom:10px; }
+    .ach-card h4 { font-weight:700; font-size:.9rem; margin-bottom:4px; }
+    .ach-card p  { font-size:.78rem; color:var(--muted); line-height:1.5; }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+    .stat-card:nth-child(1){animation-delay:.05s}
+    .stat-card:nth-child(2){animation-delay:.1s}
+    .stat-card:nth-child(3){animation-delay:.15s}
+    .stat-card:nth-child(4){animation-delay:.2s}
+  </style>
+</head>
+<body>
+<button class="logout-btn" onclick="FitTrackDB.logout()">Logout</button>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo-wrap">
+    <div class="logo-icon">🏋️</div>
+    <div>
+      <div class="logo-text">FIT<span>TRACK</span></div>
+      <div class="logo-sub">FITNESS PORTAL</div>
+    </div>
+  </div>
+  <ul class="menu">
+    <li onclick="location.href='dashboard.html'"><span class="icon">🏠</span> Dashboard</li>
+    <li onclick="location.href='bmi-calculator.html'"><span class="icon">📊</span> BMI Calculator</li>
+    <li onclick="location.href='nutrition.html'"><span class="icon">🥗</span> Nutrition</li>
+    <li class="active"><span class="icon">📈</span> Progress</li>
+    <li onclick="location.href='chat.html'"><span class="icon">💬</span> Trainer Chat</li>
+    <li onclick="location.href='exercise-library.html'"><span class="icon">🏃</span> Exercise Library</li>
+    <li onclick="location.href='workout-suggestion.html'"><span class="icon">🎯</span> Workout Plan</li>
+    <li onclick="location.href='membership.html'"><span class="icon">🏅</span> Membership</li>
+    <li><span class="icon">📋</span> Workout History</li>
+  </ul>
+  <div class="trainer-box" id="trainerBox" style="display:none">
+    <div class="label">⚡ Your Trainer</div>
+    <div class="name" id="trainerName"></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="page-header">
+    <h1>Fitness Progress Tracking</h1>
+    <p>All data synced from your BMI, Nutrition, and Workout logs</p>
+  </div>
+
+  <!-- KEY METRICS -->
+  <div class="stats-grid">
+    <div class="stat-card yellow">
+      <div class="sc-top"><div class="sc-icon">⚖️</div><span class="sc-badge dark" id="weightChangeBadge">—</span></div>
+      <div class="sc-val" id="currentWeight">—</div>
+      <div class="sc-label">Current Weight</div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-top"><div class="sc-icon">🔥</div><span class="sc-badge green" id="weeklyBurnBadge">0 cal</span></div>
+      <div class="sc-val" id="weeklyBurnVal">0</div>
+      <div class="sc-label">Weekly Cal Burned</div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-top"><div class="sc-icon">⚖️</div><span class="sc-badge yellow-t" id="bmiCategoryBadge">—</span></div>
+      <div class="sc-val" id="bmiVal">—</div>
+      <div class="sc-label">Latest BMI</div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-top"><div class="sc-icon">🏋️</div><span class="sc-badge green" id="workoutCountBadge">0</span></div>
+      <div class="sc-val" id="workoutCount">0</div>
+      <div class="sc-label">Workouts Logged</div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts-2">
+    <div class="chart-card">
+      <div class="chart-card-head">
+        <h3>⚖️ Weight Over Time</h3>
+        <span class="trend-badge" id="weightTrendBadge">—</span>
+      </div>
+      <canvas id="weightChart" height="240"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-head">
+        <h3>🔥 Weekly Calorie Burn</h3>
+        <span class="trend-badge up">This week</span>
+      </div>
+      <canvas id="calBurnChart" height="240"></canvas>
+    </div>
+  </div>
+  <div class="charts-2">
+    <div class="chart-card">
+      <div class="chart-card-head">
+        <h3>⏱️ Workout Duration (min)</h3>
+        <span class="trend-badge up">This week</span>
+      </div>
+      <canvas id="durationChart" height="240"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-head">
+        <h3>🍎 Daily Calories Consumed</h3>
+        <span class="trend-badge up">Today</span>
+      </div>
+      <canvas id="nutritionChart" height="240"></canvas>
+    </div>
+  </div>
+
+  <!-- WEIGHT LOG -->
+  <div class="weight-section">
+    <div class="weight-head"><h3>📋 Weight Log</h3></div>
+    <div class="add-weight-form">
+      <input type="number" id="newWeight" placeholder="Enter weight in kg (e.g. 74.5)" step="0.1" min="20" max="300" />
+      <button class="add-btn" onclick="addWeight()">+ Log Weight</button>
+    </div>
+    <div class="weight-log-list" id="weightLogList"><p class="no-log">No weight entries yet. Log your first entry above!</p></div>
+  </div>
+
+  <!-- BMI HISTORY -->
+  <div class="bmi-section">
+    <h3>📊 BMI History</h3>
+    <div id="bmiHistoryList"><p class="no-log" style="color:var(--muted);font-size:.88rem">No BMI records yet. Use the BMI Calculator to log your first entry.</p></div>
+  </div>
+
+  <!-- ACHIEVEMENTS -->
+  <div class="achievements-section">
+    <div class="ach-head">
+      <div class="ach-icon">🏆</div>
+      <div><h3>Achievements</h3><p>Your fitness milestones</p></div>
+    </div>
+    <div class="ach-grid" id="achGrid"></div>
+  </div>
+</div>
+
+<script>
+const session = FitTrackDB.requireClient();
+if (session.assignedTrainerName) {
+  document.getElementById("trainerBox").style.display = "block";
+  document.getElementById("trainerName").textContent  = session.assignedTrainerName;
+}
+function logout() { FitTrackDB.logout(); }
+
+// ── Chart options ────────────────────────────────────────────────
+const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const tt = { backgroundColor:"#18181b", titleColor:"#fafafa", bodyColor:"#a1a1aa", borderColor:"#27272a", borderWidth:1, cornerRadius:8, padding:10 };
+const gridColor  = "#1e1e22";
+const tickColor  = "#71717a";
+
+const weightChart = new Chart(document.getElementById("weightChart"), {
+  type:"line",
+  data:{ labels:[], datasets:[{ data:[], borderColor:"#fbbf24", backgroundColor:"rgba(251,191,36,.08)", borderWidth:2.5, pointBackgroundColor:"#fbbf24", pointRadius:5, tension:0.4, fill:true }] },
+  options:{ responsive:true, maintainAspectRatio:true, plugins:{ legend:{display:false}, tooltip:tt }, scales:{ x:{grid:{color:gridColor},ticks:{color:tickColor}}, y:{grid:{color:gridColor},ticks:{color:tickColor}} } }
+});
+
+const calChart = new Chart(document.getElementById("calBurnChart"), {
+  type:"line",
+  data:{ labels:DAYS, datasets:[{ data:[0,0,0,0,0,0,0], borderColor:"#22c55e", backgroundColor:"rgba(34,197,94,.08)", borderWidth:2.5, pointBackgroundColor:"#22c55e", pointRadius:4, tension:0.4, fill:true }] },
+  options:{ responsive:true, maintainAspectRatio:true, plugins:{ legend:{display:false}, tooltip:tt }, scales:{ x:{grid:{color:gridColor},ticks:{color:tickColor}}, y:{grid:{color:gridColor},ticks:{color:tickColor}} } }
+});
+
+const durChart = new Chart(document.getElementById("durationChart"), {
+  type:"bar",
+  data:{ labels:DAYS, datasets:[{ data:[0,0,0,0,0,0,0], backgroundColor:"rgba(251,191,36,.75)", borderRadius:8, borderSkipped:false }] },
+  options:{ responsive:true, maintainAspectRatio:true, plugins:{ legend:{display:false}, tooltip:tt }, scales:{ x:{grid:{color:gridColor},ticks:{color:tickColor}}, y:{grid:{color:gridColor},ticks:{color:tickColor}} } }
+});
+
+const nutChart = new Chart(document.getElementById("nutritionChart"), {
+  type:"bar",
+  data:{ labels:["Protein","Carbs","Fats"], datasets:[{ data:[0,0,0], backgroundColor:["rgba(234,179,8,.75)","rgba(59,130,246,.75)","rgba(34,197,94,.75)"], borderRadius:8, borderSkipped:false }] },
+  options:{ responsive:true, maintainAspectRatio:true, plugins:{ legend:{display:false}, tooltip:tt }, scales:{ x:{grid:{color:gridColor},ticks:{color:tickColor}}, y:{grid:{color:gridColor},ticks:{color:tickColor}} } }
+});
+
+// ── Main refresh ──────────────────────────────────────────────────
+// ── Main refresh ──────────────────────────────────────────────────
+async function refreshAll() {
+  // 1. Weight
+  const wLog = await FitTrackDB.getWeightLog();
+  const latestW = await FitTrackDB.getLatestWeight();
+  if (latestW && latestW.kg) {
+    document.getElementById("currentWeight").textContent = latestW.kg + "kg";
+    const chg = latestW.change;
+    if (chg !== null) {
+      const badge = document.getElementById("weightChangeBadge");
+      badge.textContent = (chg > 0 ? "+" : "") + chg + "kg";
+      badge.className   = "sc-badge " + (chg <= 0 ? "green" : "red");
+      const tb = document.getElementById("weightTrendBadge");
+      tb.textContent = chg <= 0 ? "▼ " + Math.abs(chg) + "kg lost" : "▲ +" + chg + "kg gained";
+      tb.className   = "trend-badge " + (chg <= 0 ? "up" : "down");
+    }
+  }
+  // Weight chart — last 10 entries reversed (oldest first)
+  const wSorted = [...wLog].reverse().slice(-10);
+  weightChart.data.labels           = wSorted.map(w => w.date);
+  weightChart.data.datasets[0].data = wSorted.map(w => w.kg);
+  weightChart.update();
+
+  // 2. Calorie burn + duration charts
+  const burn = await FitTrackDB.getWeeklyBurn();
+  document.getElementById("weeklyBurnVal").textContent     = burn.total.toLocaleString();
+  document.getElementById("weeklyBurnBadge").textContent   = burn.total.toLocaleString() + " cal";
+  calChart.data.datasets[0].data = [...burn.byDay];
+  durChart.data.datasets[0].data = [...burn.byDayDuration];
+  calChart.update();
+  durChart.update();
+
+  // 3. BMI
+  const bmiData = await FitTrackDB.getLatestBmi();
+  if (bmiData) {
+    document.getElementById("bmiVal").textContent            = bmiData.bmi;
+    document.getElementById("bmiCategoryBadge").textContent  = bmiData.category;
+  }
+
+  // 4. Workout count
+  const hist = await FitTrackDB.getWorkoutHist();
+  document.getElementById("workoutCount").textContent      = hist.length;
+  document.getElementById("workoutCountBadge").textContent = hist.length + " total";
+
+  // 5. Nutrition macros chart
+  const todayMeals = await FitTrackDB.getTodayMeals();
+  const totals = todayMeals.reduce((acc, m) => ({
+    protein: acc.protein + (m.proteinG || m.protein || 0),
+    carbs: acc.carbs + (m.carbsG || m.carbs || 0),
+    fats: acc.fats + (m.fatsG || m.fats || 0)
+  }), { protein:0, carbs:0, fats:0 });
+  nutChart.data.datasets[0].data = [totals.protein, totals.carbs, totals.fats];
+  nutChart.update();
+
+  // 6. Render logs + achievements
+  await renderWeightLog();
+  await renderBmiHistory();
+  await renderAchievements(hist, wLog, burn);
+}
+
+// ── Weight log render ─────────────────────────────────────────────
+async function renderWeightLog() {
+  const log = await FitTrackDB.getWeightLog();
+  const el  = document.getElementById("weightLogList");
+  if (!log || !log.length) { el.innerHTML='<p class="no-log">No weight entries yet.</p>'; return; }
+  el.innerHTML = log.map((entry, i) => {
+    let changeHTML = "";
+    if (i < log.length - 1) {
+      const diff = (entry.kg - log[i+1].kg).toFixed(1);
+      const cls  = diff < 0 ? "down" : diff > 0 ? "up" : "";
+      changeHTML = `<span class="wli-change ${cls}">${diff > 0 ? "+" : ""}${diff} kg</span>`;
+    }
+    return `<div class="weight-log-item">
+      <div class="wli-left">
+        <div class="wli-dot"></div>
+        <div><div class="wli-date">${entry.date}</div><div class="wli-kg">${entry.kg} kg</div></div>
+      </div>
+      ${changeHTML}
+    </div>`;
+  }).join("");
+}
+
+// ── BMI history render ────────────────────────────────────────────
+async function renderBmiHistory() {
+  const log = await FitTrackDB.getBmiLog();
+  const el  = document.getElementById("bmiHistoryList");
+  if (!log || !log.length) { el.innerHTML = '<p class="no-log" style="color:var(--muted);font-size:.88rem">No BMI records yet.</p>'; return; }
+  const colorMap = { Underweight:"var(--blue)", Normal:"var(--green)", Overweight:"var(--yellow)", Obese:"var(--red)" };
+  el.innerHTML = log.map(r => `
+    <div class="bmi-log-item">
+      <div>
+        <div class="bmi-num" style="color:${colorMap[r.category]||'var(--yellow)'}">${r.bmi}</div>
+        <div class="bmi-date">${new Date(r.recordedAt).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-weight:700;color:${colorMap[r.category]||'var(--yellow)'}">${r.category}</div>
+        <div class="bmi-date">${r.weightKg}kg · ${r.heightCm}cm</div>
+      </div>
+    </div>`).join("");
+}
+
+// ── Achievements (auto-generated from real data) ──────────────────
+async function renderAchievements(hist, wLog, burn) {
+  const achs  = [];
+
+  if (hist.length >= 1)  achs.push({ icon:"🏋️", title:"First Workout",     desc:"You logged your first workout — the hardest step!" });
+  if (hist.length >= 10) achs.push({ icon:"🔟", title:"10 Workouts",        desc:"You've logged 10 workouts. Consistency is key!" });
+  if (hist.length >= 30) achs.push({ icon:"🔥", title:"30 Workouts",        desc:"30 workouts logged — you're on a roll!" });
+  if (burn.total >= 1000) achs.push({ icon:"💥", title:"1,000 Cal Week",    desc:"Burned over 1,000 calories in a week. Crushing it!" });
+  if (burn.total >= 3500) achs.push({ icon:"⚡", title:"3,500 Cal Week",    desc:"Burned 3,500+ calories this week — top performance!" });
+  if (wLog && wLog.length >= 2) {
+    // wLog[0] is newest. diff = oldest - newest to see loss.
+    const oldest = wLog[wLog.length-1].kg;
+    const newest = wLog[0].kg;
+    const diff = oldest - newest;
+    if (diff >= 1)  achs.push({ icon:"⚖️", title:"Weight Loss Started",     desc:`You've lost ${diff.toFixed(1)}kg on your FitTrack journey!` });
+    if (diff >= 5)  achs.push({ icon:"🏅", title:"5kg Lost",                desc:"Amazing! You've lost 5kg. Keep going!" });
+    if (diff >= 10) achs.push({ icon:"🥇", title:"10kg Lost",               desc:"Incredible — 10kg lost. You're an inspiration!" });
+  }
+
+  const el = document.getElementById("achGrid");
+  if (!achs.length) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:.88rem;grid-column:1/-1">Log workouts and weight to unlock achievements!</p>';
+    return;
+  }
+  el.innerHTML = achs.map(a => `
+    <div class="ach-card">
+      <div class="ach-badge">${a.icon}</div>
+      <h4>${a.title}</h4>
+      <p>${a.desc}</p>
+    </div>`).join("");
+}
+
+// ── Log weight ────────────────────────────────────────────────────
+async function addWeight() {
+  const val = parseFloat(document.getElementById("newWeight").value);
+  if (!val || val < 20 || val > 300) { alert("Please enter a valid weight (20–300 kg)."); return; }
+  
+  const btn = document.querySelector(".add-btn");
+  btn.disabled = true;
+  
+  try {
+    await FitTrackDB.addWeight(val);
+    document.getElementById("newWeight").value = "";
+    await refreshAll();
+  } catch(err) {
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── React to other pages ──────────────────────────────────────────
+window.addEventListener("fittrack:update", refreshAll);
+
+refreshAll();
+</script>
+</body>
+</html>

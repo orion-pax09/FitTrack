@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Membership – FitTrack</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="../../backend/config/fittrack-db.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #09090b; 
+      --surface: #18181b; 
+      --surface2: #24242b;
+      --border: #27272a; 
+      --border2: #3f3f46;
+      --text: #fafafa; 
+      --muted: #71717a;
+      --yellow: #fbbf24; 
+      --yellow-hover: #ca8a04; 
+      --yellow-dim: rgba(251, 191, 36, 0.12);
+      --blue: #3b82f6; 
+      --green: #22c55e; 
+      --red: #ef4444;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+
+    /* SIDEBAR */
+    .sidebar { position: fixed; left: 0; top: 0; width: 260px; height: 100vh; background: #0b0b0b; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 16px; z-index: 100; }
+    .logo-wrap { display: flex; align-items: center; gap: 12px; padding: 0 8px; margin-bottom: 32px; }
+    .logo-icon { width: 40px; height: 40px; background: var(--yellow); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .logo-text { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: 2px; }
+    .logo-text span { color: var(--yellow); }
+    .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+    .menu { list-style: none; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .menu li { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 10px; color: var(--muted); cursor: pointer; font-size: 13.5px; font-weight: 500; transition: all .2s; }
+    .menu li:hover { background: var(--surface); color: var(--text); }
+    .menu li.active { background: var(--yellow); color: #000; font-weight: 700; }
+    .menu li .icon { font-size: 15px; width: 18px; text-align: center; }
+    .trainer-box { margin-top: auto; background: #1a1500; border: 1px solid rgba(251,191,36,0.2); border-radius: 12px; padding: 14px; }
+    .trainer-box .label { font-size: 10px; color: var(--yellow); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .trainer-box .name  { font-size: 14px; font-weight: 700; }
+
+    /* MAIN */
+    .main { margin-left: 260px; flex: 1; padding: 40px 28px; overflow-y: auto; display: flex; flex-direction: column; }
+    .logout-btn { position: fixed; top: 16px; right: 20px; background: var(--yellow); color: #000; font-weight: 700; font-size: 13px; padding: 9px 20px; border-radius: 8px; border: none; cursor: pointer; z-index: 200; font-family: 'DM Sans', sans-serif; }
+    .logout-btn:hover { opacity: 0.85; }
+
+    .header { margin-bottom: 32px; }
+    .header h1 { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; margin-bottom: 6px; }
+    .header p { color: var(--muted); font-size: .95rem; }
+
+    /* MEMBERSHIP STATUS CARD */
+    .membership-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-bottom: 32px;
+      display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap;
+    }
+    .status-info { display: flex; flex-direction: column; gap: 8px; }
+    .status-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .status-plan { font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 800; color: var(--yellow); }
+    .status-dates { font-size: 14px; color: var(--text); }
+    
+    .badge {
+      display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 99px; font-size: 12px; font-weight: 700; text-transform: uppercase;
+    }
+    .badge.active { background: rgba(34, 197, 94, 0.15); color: var(--green); border: 1px solid rgba(34, 197, 94, 0.2); }
+    .badge.inactive { background: rgba(239, 68, 68, 0.15); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.2); }
+
+    /* PRICING PLANS */
+    .plans-title { font-family: 'Syne', sans-serif; font-size: 1.4rem; font-weight: 800; margin-bottom: 20px; }
+    .pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 32px; }
+    @media(max-width: 900px) { .pricing-grid { grid-template-columns: 1fr; } }
+    
+    .price-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px;
+      display: flex; flex-direction: column; gap: 20px; transition: border-color .2s, transform .2s;
+    }
+    .price-card.featured { border-color: var(--yellow); transform: scale(1.02); }
+    .price-card:hover { transform: translateY(-3px); border-color: var(--yellow); }
+    .price-name { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; }
+    .price-amt { font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 800; }
+    .price-amt span { font-size: 14px; color: var(--muted); font-weight: 500; }
+    
+    .price-features { list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 14px; color: #d4d4d8; }
+    .price-features li { display: flex; align-items: center; gap: 8px; }
+    .price-features li::before { content: "✓"; color: var(--yellow); font-weight: bold; }
+
+    .action-btn {
+      width: 100%; padding: 14px; background: var(--yellow); color: #000; font-weight: 700; font-size: 14px;
+      font-family: 'DM Sans', sans-serif; border: none; border-radius: 10px; cursor: pointer; text-align: center;
+      transition: background .2s;
+    }
+    .action-btn:hover { background: var(--yellow-hover); }
+    .action-btn.secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+    .action-btn.secondary:hover { background: var(--border); }
+  </style>
+</head>
+<body>
+
+<button class="logout-btn" onclick="FitTrackDB.logout()">Logout</button>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo-wrap">
+    <div class="logo-icon">🏋️</div>
+    <div>
+      <div class="logo-text">FIT<span>TRACK</span></div>
+      <div class="logo-sub">FITNESS PORTAL</div>
+    </div>
+  </div>
+  <ul class="menu">
+    <li onclick="location.href='dashboard.html'"><span class="icon">🏠</span> Dashboard</li>
+    <li onclick="location.href='bmi-calculator.html'"><span class="icon">📊</span> BMI Calculator</li>
+    <li onclick="location.href='nutrition.html'"><span class="icon">🥗</span> Nutrition</li>
+    <li onclick="location.href='progress.html'"><span class="icon">📈</span> Progress</li>
+    <li onclick="location.href='chat.html'"><span class="icon">💬</span> Trainer Chat</li>
+    <li onclick="location.href='exercise-library.html'"><span class="icon">🏃</span> Exercise Library</li>
+    <li onclick="location.href='workout-suggestion.html'"><span class="icon">🎯</span> Workout Plan</li>
+    <li class="active"><span class="icon">🏅</span> Membership</li>
+  </ul>
+  <div class="trainer-box" id="trainerBox" style="display:none">
+    <div class="label">⚡ Your Trainer</div>
+    <div class="name" id="trainerName"></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="header">
+    <h1>My Gym Membership</h1>
+    <p>View your active gym plan, subscription details, and manage billing</p>
+  </div>
+
+  <!-- CURRENT SUBSCRIPTION CARD -->
+  <div class="membership-card">
+    <div class="status-info">
+      <span class="status-title">Current Active Plan</span>
+      <h2 class="status-plan" id="memberPlan">Loading Plan...</h2>
+      <div class="status-dates" id="memberDates">Start: — &nbsp;·&nbsp; End: —</div>
+    </div>
+    <span class="badge inactive" id="memberStatus">Loading...</span>
+  </div>
+
+  <!-- PRICING TIERS -->
+  <h2 class="plans-title">Explore Our Plans</h2>
+  <div class="pricing-grid">
+    <div class="price-card">
+      <h3 class="price-name">Basic Plan</h3>
+      <div class="price-amt">Rs. 3,000<span>/month</span></div>
+      <ul class="price-features">
+        <li>Standard Gym Access</li>
+        <li>Basic Cardio Section</li>
+        <li>Locker Room Facilities</li>
+      </ul>
+      <button class="action-btn secondary" onclick="alertContactAdmin('Basic')">Contact Admin to Subscribe</button>
+    </div>
+    <div class="price-card featured">
+      <h3 class="price-name">Standard Plan</h3>
+      <div class="price-amt">Rs. 5,000<span>/month</span></div>
+      <ul class="price-features">
+        <li>All Basic Tier Facilities</li>
+        <li>Assign a Certified Personal Trainer</li>
+        <li>Full BMI & Diet Logging System</li>
+        <li>1x Group Strength Sessions</li>
+      </ul>
+      <button class="action-btn" onclick="alertContactAdmin('Standard')">Contact Admin to Subscribe</button>
+    </div>
+    <div class="price-card">
+      <h3 class="price-name">Premium Plan</h3>
+      <div class="price-amt">Rs. 8,000<span>/month</span></div>
+      <ul class="price-features">
+        <li>Unlimited Gym Access 24/7</li>
+        <li>Dedicated Premium Trainer Support</li>
+        <li>Weekly Custom Meal Suggestions</li>
+        <li>Unlimited Yoga & Spin Classes</li>
+        <li>Sauna & Hydrotherapy Entry</li>
+      </ul>
+      <button class="action-btn secondary" onclick="alertContactAdmin('Premium')">Contact Admin to Subscribe</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ─── AUTH & SESSION ───
+  const session = FitTrackDB.requireClient();
+  if (session && session.assignedTrainerName) {
+    document.getElementById("trainerBox").style.display = "block";
+    document.getElementById("trainerName").textContent  = session.assignedTrainerName;
+  }
+
+  // ─── LOAD MEMBERSHIP STATUS ───
+  async function loadMembership() {
+    const planEl = document.getElementById("memberPlan");
+    const datesEl = document.getElementById("memberDates");
+    const statusEl = document.getElementById("memberStatus");
+
+    try {
+      const memberships = await FitTrackDB.getMemberships(session.id);
+      
+      if (!memberships || memberships.length === 0 || memberships[0].plan === "None" || !memberships[0].is_active) {
+        planEl.textContent = "No Active Plan";
+        datesEl.textContent = "Subscribe to standard or premium plan below to assign a trainer and get customized plans.";
+        statusEl.textContent = "Inactive";
+        statusEl.className = "badge inactive";
+        return;
+      }
+
+      const m = memberships[0];
+      planEl.textContent = `${m.plan} Plan`;
+      
+      const start = new Date(m.start_date).toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' });
+      const end = new Date(m.end_date).toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' });
+      datesEl.textContent = `Start Date: ${start}  |  Billing Cycle Ends: ${end}`;
+      
+      statusEl.textContent = m.is_active ? "Active" : "Expired";
+      statusEl.className = m.is_active ? "badge active" : "badge inactive";
+
+    } catch (err) {
+      planEl.textContent = "Error loading status";
+      datesEl.textContent = "Could not fetch details from server.";
+      statusEl.textContent = "Offline";
+      statusEl.className = "badge inactive";
+      console.error(err);
+    }
+  }
+
+  function alertContactAdmin(planName) {
+    alert(`To upgrade or subscribe to the ${planName} Plan, please request the gym administrator to set your subscription plan at the front desk. Use email: ${session.email}`);
+  }
+
+  // Initial load
+  loadMembership();
+</script>
+</body>
+</html>

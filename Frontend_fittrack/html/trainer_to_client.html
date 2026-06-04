@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitTrack – Clients</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: #0a0a0a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+        }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            position: fixed;
+            left: 0; top: 0;
+            width: 260px; height: 100vh;
+            background: #0b0b0b;
+            border-right: 1px solid #1a1a1a;
+            padding: 24px 20px;
+        }
+
+        .logo { font-size: 20px; font-weight: 900; letter-spacing: 3px; }
+        .logo span { color: #ffc400; }
+        .logo-sub { font-size: 11px; color: #555; margin-top: 3px; margin-bottom: 24px; }
+
+        .menu { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+        .menu li {
+            padding: 11px 14px; border-radius: 10px;
+            color: #888; cursor: pointer; font-size: 13px; transition: all 0.2s;
+        }
+        .menu li:hover { background: #1a1a1a; color: white; }
+        .menu li.active { background: #ffc400; color: black; font-weight: bold; }
+
+        /* ── Main ── */
+        .main { margin-left: 260px; padding: 36px; }
+        .main h1 { font-size: 26px; margin-bottom: 6px; }
+        .main .sub { color: #555; font-size: 13px; margin-bottom: 28px; }
+
+        /* Search */
+        .search {
+            width: 100%; max-width: 380px;
+            padding: 11px 16px;
+            background: #111; border: 1px solid #2a2a2a;
+            border-radius: 10px; color: white; font-size: 14px;
+            outline: none; margin-bottom: 26px; transition: border 0.2s;
+        }
+        .search:focus { border-color: #ffc400; }
+        .search::placeholder { color: #444; }
+
+        /* Client grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .card {
+            background: #111;
+            border: 1px solid #1e1e1e;
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: border-color 0.2s;
+        }
+        .card:hover { border-color: #333; }
+
+        .av {
+            width: 50px; height: 50px; border-radius: 50%;
+            background: #ffc400; color: black;
+            font-weight: 900; font-size: 18px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .card-info { flex: 1; }
+        .card-info h3 { font-size: 15px; margin-bottom: 3px; }
+        .card-info .uname { font-size: 12px; color: #ffc400; margin-bottom: 3px; }
+        .card-info .meta  { font-size: 12px; color: #555; }
+
+        /* Chat button on each card */
+        .chat-btn {
+            background: #ffc400;
+            color: black;
+            font-weight: bold;
+            font-size: 13px;
+            border: none;
+            border-radius: 9px;
+            padding: 9px 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+            flex-shrink: 0;
+            /* Reset global button styles */
+            position: static !important;
+            top: auto !important; right: auto !important;
+            width: auto !important; margin: 0 !important;
+        }
+        .chat-btn:hover { background: #e6b000; }
+
+        /* Empty state */
+        .empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: #333;
+            padding: 60px 20px;
+            font-size: 15px;
+        }
+        .empty .icon { font-size: 48px; margin-bottom: 12px; }
+
+        /* Logout */
+        .logout-btn {
+            position: fixed; top: 14px; right: 14px;
+            background: #ffc400; color: black;
+            font-weight: bold; font-size: 13px;
+            padding: 9px 18px; border-radius: 8px;
+            border: none; cursor: pointer; z-index: 999;
+        }
+    </style>
+</head>
+<body>
+
+<button class="logout-btn" onclick="logout()">Logout</button>
+
+<div class="sidebar">
+    <div class="logo">FIT<span>TRACK</span></div>
+    <div class="logo-sub">Fitness Management</div>
+    <ul class="menu">
+        <li onclick="location.href='trainerdashboard.html'">Dashboard</li>
+        <li class="active">View Clients</li>
+        <li>Workout Suggestion</li>
+    </ul>
+</div>
+
+<div class="main">
+    <h1>Your Clients</h1>
+    <p class="sub">Click "Chat" on any client to open a conversation with them.</p>
+
+    <input class="search" type="text" id="searchInput"
+           placeholder="Search by name or username…"
+           oninput="render()" />
+
+    <div class="grid" id="grid"></div>
+</div>
+
+<script>
+    // ── Auth guard ─────────────────────────────────────────────
+    const session = JSON.parse(localStorage.getItem("fittrack_session") || "null");
+    if (!session || session.role !== "trainer") {
+        alert("Trainers only.");
+        window.location.href = "index.html";
+    }
+
+    // ── Get clients assigned to this trainer ───────────────────
+    let myClients = [];
+
+    async function fetchClients() {
+        try {
+            const token = localStorage.getItem("fittrack_token");
+            const res = await fetch("http://localhost:3000/api/auth/clients", {
+                headers: { "Authorization": "Bearer " + token }
+            });
+            if (res.ok) {
+                myClients = await res.json();
+                render();
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    // ── Render list ────────────────────────────────────────────
+    function render() {
+        const q       = document.getElementById("searchInput").value.toLowerCase();
+        const clients = myClients.filter(c =>
+            (c.firstname + " " + c.lastname).toLowerCase().includes(q) ||
+            c.username.toLowerCase().includes(q)
+        );
+        const grid = document.getElementById("grid");
+
+        if (clients.length === 0) {
+            grid.innerHTML = `
+                <div class="empty">
+                    <div class="icon">👤</div>
+                    <p>${q ? "No clients match your search." : "No clients are assigned to you yet."}</p>
+                </div>`;
+            return;
+        }
+
+        grid.innerHTML = clients.map(c => {
+            const ini = (c.firstname[0] + c.lastname[0]).toUpperCase();
+            return `
+            <div class="card">
+                <div class="av">${ini}</div>
+                <div class="card-info">
+                    <h3>${c.firstname} ${c.lastname}</h3>
+                    <div class="uname">@${c.username}</div>
+                    <div class="meta">${c.gender || ""}  ·  Age ${c.age || "?"}</div>
+                </div>
+                <button class="chat-btn" onclick="goChat('${c.id}','${c.firstname} ${c.lastname}')">
+                    💬 Chat
+                </button>
+            </div>`;
+        }).join("");
+    }
+
+    // ── Go to chat with this specific client ───────────────────
+    function goChat(clientId, clientName) {
+        // Save who we're chatting with so chat.html knows immediately
+        localStorage.setItem("fittrack_chat_target", JSON.stringify({
+            id:   clientId,
+            name: clientName
+        }));
+        window.location.href = "chat.html";
+    }
+
+    // ── Logout ─────────────────────────────────────────────────
+    function logout() {
+        localStorage.removeItem("fittrack_session");
+        localStorage.removeItem("fittrack_token");
+        localStorage.removeItem("isLoggedIn");
+        window.location.href = "index.html";
+    }
+
+    fetchClients();
+</script>
+</body>
+</html>

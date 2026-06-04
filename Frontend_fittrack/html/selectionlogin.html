@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="../css/selectionlogin.css">
+</head>
+<body>
+    <div class="select_role">
+        <h1> Welcome back to Gym fitness tracker and portal system</h1>
+        <br>
+        <h3>Select your role</h3>
+        <select name="role" id="role">
+            <option value="Client">Clients</option>
+            <option value="Trainer">Trainers</option>
+            <option value="Admin">Admin</option>
+        </select>
+        <br>
+        <br>
+        <button id="button">Go</button>
+    </div>   
+    <script>
+        document.getElementById('button').addEventListener('click',function(){
+            const role = document.getElementById('role').value;
+            if (role==""){
+                return;
+            }
+            if (role=="Client"){
+                window.location.href = "index.html";
+            }
+            else if (role == "Trainer"){
+                window.location.href="trainer.html";
+            }
+            else if (role == "Admin"){
+                window.location.href="adminlogin.html";
+            }
+        });
+    </script> 
+</body>
+</html>

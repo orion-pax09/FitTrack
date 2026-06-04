@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FitTrack – Create Workout Plan</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#080808; --sidebar:#0b0b0b; --surface:#111113; --surface2:#18181b;
+      --border:#222226; --border2:#2a2a2f; --text:#f4f4f5; --muted:#71717a;
+      --yellow:#fbbf24; --yellow-dim:rgba(251,191,36,0.12);
+      --green:#22c55e; --red:#f87171; --blue:#60a5fa;
+    }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; overflow-x:hidden; }
+
+    /* SIDEBAR */
+    .sidebar { position:fixed; left:0; top:0; width:260px; height:100vh; background:var(--sidebar); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:24px 16px; z-index:100; }
+    .logo-wrap { display:flex; align-items:center; gap:12px; padding:0 8px; margin-bottom:32px; }
+    .logo-icon { width:40px; height:40px; background:var(--yellow); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+    .logo-text { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; letter-spacing:2px; }
+    .logo-text span { color:var(--yellow); }
+    .logo-sub { font-size:10px; color:var(--muted); letter-spacing:1px; }
+    .menu { list-style:none; flex:1; display:flex; flex-direction:column; gap:4px; }
+    .menu li { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:10px; color:var(--muted); cursor:pointer; font-size:13.5px; font-weight:500; transition:all .2s; }
+    .menu li:hover { background:var(--surface2); color:var(--text); }
+    .menu li.active { background:var(--yellow); color:#000; font-weight:700; }
+    .menu li .icon { font-size:15px; width:18px; text-align:center; }
+
+    /* LOGOUT */
+    .logout-btn { position:fixed; top:16px; right:20px; background:var(--yellow); color:#000; font-weight:700; font-size:13px; padding:9px 20px; border-radius:8px; border:none; cursor:pointer; z-index:200; font-family:'DM Sans',sans-serif; transition:background .2s; }
+    .logout-btn:hover { background:#d97706; }
+
+    /* MAIN */
+    .main { margin-left:260px; flex:1; padding:32px 28px; overflow-y:auto; }
+    .page-head { margin-bottom:28px; }
+    .page-head h1 { font-family:'Syne',sans-serif; font-size:1.7rem; font-weight:800; margin-bottom:4px; }
+    .page-head p { color:var(--muted); font-size:.88rem; }
+
+    /* CARD */
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:24px; margin-bottom:24px; animation:fadeUp .4s ease both; }
+    .card h2 { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:700; margin-bottom:20px; display:flex; align-items:center; gap:8px; }
+
+    /* FORM FIELD */
+    .field { margin-bottom:16px; }
+    .field label { display:block; font-size:.78rem; color:var(--muted); margin-bottom:6px; font-weight:600; text-transform:uppercase; letter-spacing:.5px; }
+    .field input, .field select, .field textarea {
+      width:100%; background:#09090b; border:1px solid var(--border2); border-radius:10px;
+      padding:11px 14px; color:var(--text); font-size:.88rem; font-family:'DM Sans',sans-serif;
+      outline:none; transition:border .2s; resize:vertical;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color:var(--yellow); }
+    .field select option { background:#09090b; }
+
+    /* FORM ROW */
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media(max-width:700px){ .form-row{ grid-template-columns:1fr; } }
+
+    /* DAY TABS */
+    .day-tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; }
+    .day-tab {
+      padding:8px 18px; border-radius:99px; border:1px solid var(--border2);
+      background:transparent; color:var(--muted); font-size:.82rem; cursor:pointer;
+      font-family:'DM Sans',sans-serif; font-weight:500; transition:all .2s;
+      position:relative;
+    }
+    .day-tab:hover { border-color:#555; color:var(--text); }
+    .day-tab.active { background:var(--yellow); border-color:var(--yellow); color:#000; font-weight:700; }
+    .day-tab .tab-count {
+      position:absolute; top:-5px; right:-5px;
+      background:var(--green); color:#000; font-size:9px; font-weight:800;
+      min-width:16px; height:16px; border-radius:99px; display:flex;
+      align-items:center; justify-content:center; padding:0 3px;
+    }
+
+    /* EXERCISE LIST */
+    .day-panel { display:none; }
+    .day-panel.active { display:block; }
+
+    .exercise-row {
+      display:grid; grid-template-columns:1fr 80px 80px 1fr 36px; gap:10px;
+      align-items:center; margin-bottom:10px; animation:fadeUp .2s ease both;
+    }
+    @media(max-width:800px){ .exercise-row{ grid-template-columns:1fr 60px 60px; } .exercise-row .ex-notes, .exercise-row .ex-del { display:none; } }
+
+    .exercise-row input {
+      background:#09090b; border:1px solid var(--border2); border-radius:8px;
+      padding:9px 12px; color:var(--text); font-size:.85rem; font-family:'DM Sans',sans-serif;
+      outline:none; transition:border .2s;
+    }
+    .exercise-row input:focus { border-color:var(--yellow); }
+    .exercise-row input::placeholder { color:#444; }
+
+    .ex-del {
+      width:34px; height:34px; border-radius:8px; border:1px solid #2a2a2a;
+      background:transparent; color:#555; cursor:pointer; display:flex;
+      align-items:center; justify-content:center; font-size:14px;
+      transition:all .2s; flex-shrink:0;
+    }
+    .ex-del:hover { border-color:var(--red); color:var(--red); }
+
+    .add-exercise-btn {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:8px 16px; border-radius:8px; border:1px dashed var(--border2);
+      background:transparent; color:var(--muted); font-size:.82rem; cursor:pointer;
+      font-family:'DM Sans',sans-serif; transition:all .2s; margin-top:4px;
+    }
+    .add-exercise-btn:hover { border-color:var(--yellow); color:var(--yellow); }
+
+    .column-header {
+      display:grid; grid-template-columns:1fr 80px 80px 1fr 36px; gap:10px;
+      margin-bottom:8px; padding:0 2px;
+    }
+    .column-header span { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; font-weight:600; }
+    @media(max-width:800px){ .column-header{ grid-template-columns:1fr 60px 60px; } .column-header .col-notes, .column-header .col-del { display:none; } }
+
+    /* SUBMIT */
+    .submit-btn {
+      width:100%; padding:14px; background:var(--yellow); color:#000; font-weight:700;
+      font-size:1rem; border:none; border-radius:10px; cursor:pointer;
+      font-family:'Syne',sans-serif; letter-spacing:.5px; transition:background .2s, transform .1s;
+      margin-top:8px;
+    }
+    .submit-btn:hover { background:#d97706; }
+    .submit-btn:active { transform:scale(0.98); }
+    .submit-btn:disabled { background:#333; color:#666; cursor:not-allowed; }
+
+    /* TOAST */
+    .toast {
+      position:fixed; bottom:28px; right:28px; background:var(--green); color:#000;
+      font-weight:700; font-size:.88rem; padding:12px 22px; border-radius:10px;
+      transform:translateY(80px); opacity:0; transition:all .3s; z-index:999;
+    }
+    .toast.show { transform:translateY(0); opacity:1; }
+
+    /* EXISTING PLANS LIST */
+    .plan-item {
+      background:#09090b; border:1px solid var(--border2); border-radius:12px;
+      padding:16px 18px; margin-bottom:12px; animation:fadeUp .3s ease both;
+    }
+    .plan-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    .plan-header h4 { font-size:.95rem; font-weight:700; }
+    .plan-meta { font-size:.78rem; color:var(--muted); margin-bottom:10px; }
+    .plan-days { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+    .plan-day-badge {
+      padding:3px 10px; border-radius:99px; font-size:.72rem; font-weight:600;
+      background:var(--yellow-dim); color:var(--yellow);
+    }
+    .plan-del-btn {
+      background:transparent; border:1px solid #2a2a2a; color:#555;
+      font-size:12px; padding:5px 12px; border-radius:7px; cursor:pointer;
+      transition:all .2s; font-family:'DM Sans',sans-serif;
+    }
+    .plan-del-btn:hover { border-color:var(--red); color:var(--red); }
+
+    .empty-state { text-align:center; padding:40px 20px; color:var(--muted); font-size:.88rem; }
+    .empty-state .em-icon { font-size:2.5rem; margin-bottom:10px; }
+
+    .count-badge {
+      display:inline-flex; align-items:center; justify-content:center;
+      background:var(--yellow); color:#000; font-size:11px; font-weight:800;
+      min-width:20px; height:20px; border-radius:99px; padding:0 5px; margin-left:6px;
+    }
+
+    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  </style>
+</head>
+<body>
+
+<button class="logout-btn" onclick="logout()">Logout</button>
+
+<div class="sidebar">
+  <div class="logo-wrap">
+    <div class="logo-icon">🏋️</div>
+    <div>
+      <div class="logo-text">FIT<span>TRACK</span></div>
+      <div class="logo-sub">TRAINER PORTAL</div>
+    </div>
+  </div>
+  <ul class="menu">
+    <li onclick="location.href='trainerdashboard.html'"><span class="icon">🏠</span> Dashboard</li>
+    <li onclick="location.href='trainer_to_client.html'"><span class="icon">👥</span> View Clients</li>
+    <li onclick="location.href='workout-suggestion.html'"><span class="icon">💪</span> Workout Suggestions</li>
+    <li class="active"><span class="icon">📝</span> Create Workout Plan</li>
+    <li onclick="location.href='chat.html'"><span class="icon">💬</span> Chat</li>
+  </ul>
+</div>
+
+<div class="main">
+  <div class="page-head">
+    <h1>📝 Create Weekly Workout Plan</h1>
+    <p>Build day-by-day workout plans and assign them to your clients.</p>
+  </div>
+
+  <!-- CREATE PLAN FORM -->
+  <div class="card">
+    <h2>✍️ New Plan</h2>
+
+    <div class="form-row">
+      <div class="field">
+        <label>Plan Name *</label>
+        <input type="text" id="planName" placeholder="e.g. Week 1 – Strength Focus" />
+      </div>
+      <div class="field">
+        <label>Assign to Client *</label>
+        <select id="planClient">
+          <option value="">— Select a client —</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- DAY TABS -->
+    <div class="field" style="margin-top:8px;">
+      <label>Exercises by Day</label>
+      <div class="day-tabs" id="dayTabs"></div>
+    </div>
+
+    <!-- DAY PANELS -->
+    <div id="dayPanels"></div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitPlan()">🚀 Create & Assign Plan</button>
+  </div>
+
+  <!-- EXISTING PLANS -->
+  <div class="card">
+    <h2>
+      📋 Existing Plans
+      <span class="count-badge" id="planCount">0</span>
+    </h2>
+    <div id="plansList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── Auth ──────────────────────────────────────────────────────────
+  const session = JSON.parse(localStorage.getItem("fittrack_session") || "null");
+  const token   = localStorage.getItem("fittrack_token");
+  if (!session || session.role !== "trainer" || !token) {
+    alert("Trainers only.");
+    window.location.href = "index.html";
+  }
+
+  const API_URL = "http://localhost:3000/api";
+  const _headers = {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + token
+  };
+
+  const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  let activeDay = "Monday";
+  let myClients = [];
+  // Store exercises for each day
+  let dayExercises = {};
+  DAYS.forEach(d => dayExercises[d] = [{ name: "", sets: "", reps: "", notes: "" }]);
+
+  // ── Init day tabs and panels ────────────────────────────────────
+  function buildDayUI() {
+    const tabsContainer = document.getElementById("dayTabs");
+    const panelsContainer = document.getElementById("dayPanels");
+
+    tabsContainer.innerHTML = DAYS.map(day => {
+      const count = dayExercises[day].filter(e => e.name.trim()).length;
+      return `<button class="day-tab ${day === activeDay ? 'active' : ''}" data-day="${day}" onclick="switchDay('${day}')">
+        ${day.substring(0,3)}
+        ${count > 0 ? `<span class="tab-count">${count}</span>` : ''}
+      </button>`;
+    }).join("");
+
+    panelsContainer.innerHTML = DAYS.map(day => `
+      <div class="day-panel ${day === activeDay ? 'active' : ''}" id="panel-${day}">
+        <div class="column-header">
+          <span>Exercise Name</span>
+          <span>Sets</span>
+          <span>Reps</span>
+          <span class="col-notes">Notes</span>
+          <span class="col-del"></span>
+        </div>
+        <div id="exercises-${day}"></div>
+        <button class="add-exercise-btn" onclick="addExercise('${day}')">+ Add Exercise</button>
+      </div>
+    `).join("");
+
+    // Render exercises for each day
+    DAYS.forEach(renderExercises);
+  }
+
+  function switchDay(day) {
+    // Save current state first
+    saveCurrentExercises();
+    activeDay = day;
+    document.querySelectorAll(".day-tab").forEach(t => t.classList.toggle("active", t.dataset.day === day));
+    document.querySelectorAll(".day-panel").forEach(p => p.classList.toggle("active", p.id === "panel-" + day));
+  }
+
+  function saveCurrentExercises() {
+    DAYS.forEach(day => {
+      const container = document.getElementById("exercises-" + day);
+      if (!container) return;
+      const rows = container.querySelectorAll(".exercise-row");
+      dayExercises[day] = [];
+      rows.forEach(row => {
+        const inputs = row.querySelectorAll("input");
+        dayExercises[day].push({
+          name: inputs[0].value.trim(),
+          sets: inputs[1].value.trim(),
+          reps: inputs[2].value.trim(),
+          notes: inputs[3] ? inputs[3].value.trim() : ""
+        });
+      });
+    });
+  }
+
+  function renderExercises(day) {
+    const container = document.getElementById("exercises-" + day);
+    if (!container) return;
+    container.innerHTML = dayExercises[day].map((ex, i) => `
+      <div class="exercise-row">
+        <input type="text" placeholder="e.g. Push-ups" value="${escHtml(ex.name)}" />
+        <input type="text" placeholder="3" value="${escHtml(ex.sets)}" />
+        <input type="text" placeholder="15" value="${escHtml(ex.reps)}" />
+        <input type="text" class="ex-notes" placeholder="Optional notes" value="${escHtml(ex.notes)}" />
+        <button class="ex-del" onclick="removeExercise('${day}', ${i})">✕</button>
+      </div>
+    `).join("");
+  }
+
+  function addExercise(day) {
+    saveCurrentExercises();
+    dayExercises[day].push({ name: "", sets: "", reps: "", notes: "" });
+    renderExercises(day);
+    updateTabCounts();
+  }
+
+  function removeExercise(day, index) {
+    saveCurrentExercises();
+    dayExercises[day].splice(index, 1);
+    if (dayExercises[day].length === 0) {
+      dayExercises[day].push({ name: "", sets: "", reps: "", notes: "" });
+    }
+    renderExercises(day);
+    updateTabCounts();
+  }
+
+  function updateTabCounts() {
+    saveCurrentExercises();
+    document.querySelectorAll(".day-tab").forEach(tab => {
+      const day = tab.dataset.day;
+      const count = dayExercises[day].filter(e => e.name.trim()).length;
+      const existing = tab.querySelector(".tab-count");
+      if (count > 0) {
+        if (existing) existing.textContent = count;
+        else {
+          const span = document.createElement("span");
+          span.className = "tab-count";
+          span.textContent = count;
+          tab.appendChild(span);
+        }
+      } else if (existing) {
+        existing.remove();
+      }
+    });
+  }
+
+  function escHtml(str) {
+    return (str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  // ── Load clients ────────────────────────────────────────────────
+  async function loadClients() {
+    try {
+      const res = await fetch(`${API_URL}/auth/clients`, { headers: _headers });
+      if (res.ok) myClients = await res.json();
+      const sel = document.getElementById("planClient");
+      sel.innerHTML = '<option value="">— Select a client —</option>';
+      myClients.forEach(c => {
+        const o = document.createElement("option");
+        o.value = c.id;
+        o.textContent = c.firstname + " " + c.lastname + " (@" + c.username + ")";
+        sel.appendChild(o);
+      });
+    } catch(err) {
+      console.error(err);
+    }
+  }
+
+  // ── Submit plan ─────────────────────────────────────────────────
+  async function submitPlan() {
+    saveCurrentExercises();
+
+    const planName = document.getElementById("planName").value.trim();
+    const clientId = document.getElementById("planClient").value;
+
+    if (!planName) { alert("Please enter a plan name."); return; }
+    if (!clientId) { alert("Please select a client."); return; }
+
+    // Build exercises object — only include days that have at least one named exercise
+    const exercises = {};
+    let totalExercises = 0;
+    DAYS.forEach(day => {
+      const filtered = dayExercises[day].filter(e => e.name.trim());
+      if (filtered.length > 0) {
+        exercises[day] = filtered;
+        totalExercises += filtered.length;
+      }
+    });
+
+    if (totalExercises === 0) {
+      alert("Please add at least one exercise.");
+      return;
+    }
+
+    const btn = document.getElementById("submitBtn");
+    btn.disabled = true;
+    btn.textContent = "Creating...";
+
+    try {
+      const res = await fetch(`${API_URL}/workout-plans`, {
+        method: "POST",
+        headers: _headers,
+        body: JSON.stringify({ clientId: parseInt(clientId), planName, exercises })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed");
+      }
+
+      // Reset form
+      document.getElementById("planName").value = "";
+      document.getElementById("planClient").value = "";
+      DAYS.forEach(d => dayExercises[d] = [{ name: "", sets: "", reps: "", notes: "" }]);
+      buildDayUI();
+
+      showToast("✅ Workout plan created and assigned!");
+      loadPlans();
+    } catch(err) {
+      console.error(err);
+      alert("Failed to create plan: " + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "🚀 Create & Assign Plan";
+    }
+  }
+
+  // ── Load existing plans ────────────────────────────────────────
+  async function loadPlans() {
+    try {
+      const res = await fetch(`${API_URL}/workout-plans`, { headers: _headers });
+      const plans = await res.json();
+      document.getElementById("planCount").textContent = plans.length;
+
+      const container = document.getElementById("plansList");
+      if (!plans.length) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="em-icon">📭</div>
+            <p>No workout plans created yet.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = plans.map(plan => {
+        // Group exercises by day
+        const byDay = {};
+        (plan.exercises || []).forEach(ex => {
+          if (!byDay[ex.day_of_week]) byDay[ex.day_of_week] = [];
+          byDay[ex.day_of_week].push(ex);
+        });
+
+        const dayBadges = Object.keys(byDay).map(d =>
+          `<span class="plan-day-badge">${d.substring(0,3)} (${byDay[d].length})</span>`
+        ).join("");
+
+        // Build exercise details
+        let exerciseDetails = "";
+        DAYS.forEach(day => {
+          if (byDay[day] && byDay[day].length) {
+            exerciseDetails += `<div style="margin-bottom:8px;">
+              <div style="font-size:.78rem;color:var(--yellow);font-weight:600;margin-bottom:4px;">${day}</div>`;
+            byDay[day].forEach(ex => {
+              const completion = ex.is_completed ? '✅' : '⬜';
+              exerciseDetails += `<div style="font-size:.82rem;color:var(--muted);padding-left:12px;">
+                ${completion} ${escHtml(ex.exercise_name)} ${ex.sets ? '— ' + ex.sets + '×' + ex.reps : ''}
+                ${ex.notes ? '<span style="color:#555;"> · ' + escHtml(ex.notes) + '</span>' : ''}
+              </div>`;
+            });
+            exerciseDetails += `</div>`;
+          }
+        });
+
+        return `
+        <div class="plan-item">
+          <div class="plan-header">
+            <h4>${escHtml(plan.planName)}</h4>
+            <button class="plan-del-btn" onclick="deletePlan(${plan.id})">🗑 Delete</button>
+          </div>
+          <div class="plan-meta">
+            👤 ${escHtml(plan.clientName)} (@${escHtml(plan.clientUsername)})
+            &nbsp;·&nbsp; ${new Date(plan.createdAt).toLocaleDateString()}
+          </div>
+          <div class="plan-days">${dayBadges}</div>
+          ${exerciseDetails}
+        </div>`;
+      }).join("");
+    } catch(err) {
+      console.error(err);
+    }
+  }
+
+  async function deletePlan(id) {
+    if (!confirm("Delete this workout plan? This cannot be undone.")) return;
+    try {
+      await fetch(`${API_URL}/workout-plans/${id}`, { method: "DELETE", headers: _headers });
+      showToast("🗑 Plan deleted.");
+      loadPlans();
+    } catch(err) {
+      console.error(err);
+    }
+  }
+
+  // ── Toast ──────────────────────────────────────────────────────
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), 3000);
+  }
+
+  // ── Logout ─────────────────────────────────────────────────────
+  function logout() {
+    localStorage.removeItem("fittrack_session");
+    localStorage.removeItem("fittrack_token");
+    localStorage.removeItem("isLoggedIn");
+    window.location.href = "index.html";
+  }
+
+  // ── Boot ───────────────────────────────────────────────────────
+  buildDayUI();
+  loadClients();
+  loadPlans();
+
+  // Update tab counts on input blur
+  document.addEventListener("focusout", (e) => {
+    if (e.target.closest && e.target.closest(".exercise-row")) {
+      updateTabCounts();
+    }
+  });
+</script>
+</body>
+</html>

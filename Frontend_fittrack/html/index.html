@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitTrack – Login</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: #0a0a0a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+
+        .box {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 14px;
+            padding: 40px 36px;
+            width: 100%;
+            max-width: 420px;
+            display: none;
+            flex-direction: column;
+            gap: 14px;
+        }
+        .box.active { display: flex; }
+
+        h2 { color: #ffc400; font-size: 24px; margin-bottom: 6px; letter-spacing: 2px; }
+
+        label { font-size: 13px; color: #aaa; margin-bottom: -8px; }
+
+        input, select {
+            width: 100%;
+            padding: 11px 14px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+            transition: border 0.2s;
+        }
+        input:focus, select:focus { border-color: #ffc400; }
+        select option { background: #1a1a1a; }
+
+        button.btn {
+            width: 100%;
+            padding: 12px;
+            background: #ffc400;
+            color: black;
+            font-weight: bold;
+            font-size: 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 6px;
+            transition: background 0.2s;
+            position: static;
+        }
+        button.btn:hover { background: #e6b000; }
+
+        p { font-size: 13px; color: #888; text-align: center; }
+        span.link { color: #ffc400; cursor: pointer; font-weight: bold; }
+        span.link:hover { text-decoration: underline; }
+
+        .logo { text-align: center; font-size: 26px; font-weight: 900; letter-spacing: 3px; }
+        .logo span { color: #ffc400; }
+        .sub { text-align: center; font-size: 12px; color: #555; margin-top: -8px; }
+
+        .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        /* Role toggle */
+        .role-toggle {
+            display: flex;
+            border: 1px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .role-toggle button {
+            flex: 1; padding: 10px;
+            background: #1a1a1a; color: #888;
+            border: none; font-size: 13px; font-weight: bold;
+            cursor: pointer; transition: all 0.2s;
+            position: static; margin: 0; border-radius: 0; width: auto;
+        }
+        .role-toggle button.selected { background: #ffc400; color: black; }
+
+        /* Trainer picker card */
+        .trainer-section {
+            background: #1a1500;
+            border: 1px solid #ffc40033;
+            border-radius: 10px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .trainer-section label { color: #ffc400; font-weight: bold; margin: 0; }
+
+        .no-trainer-msg {
+            font-size: 12px; color: #ff9999;
+            background: #1a0000;
+            border: 1px solid #ff000033;
+            border-radius: 8px;
+            padding: 10px 14px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div class="box active" id="loginBox">
+    <div class="logo">FIT<span>TRACK</span></div>
+    <p class="sub">Fitness Management Portal</p>
+    <h2>LOGIN</h2>
+
+    <label>Email</label>
+    <input type="email" id="loginEmail" placeholder="Enter your email" />
+
+    <label>Password</label>
+    <input type="password" id="loginPassword" placeholder="Enter your password" />
+
+    <button class="btn" onclick="loginUser()">Login</button>
+    <p>Don't have an account? <span class="link" onclick="showRegister()">Register</span></p>
+</div>
+
+<!-- ── REGISTER ── -->
+<div class="box" id="registerBox">
+    <div class="logo">FIT<span>TRACK</span></div>
+    <p class="sub">Create your account</p>
+    <h2>REGISTER</h2>
+
+    <div class="row2">
+        <div style="display:flex;flex-direction:column;gap:6px">
+            <label>First Name</label>
+            <input type="text" id="reg_firstname" placeholder="First name" />
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+            <label>Last Name</label>
+            <input type="text" id="reg_lastname" placeholder="Last name" />
+        </div>
+    </div>
+
+    <label>Username</label>
+    <input type="text" id="reg_username" placeholder="Choose a username" />
+
+    <label>Email</label>
+    <input type="email" id="reg_email" placeholder="Enter your email" />
+
+    <div class="row2">
+        <div style="display:flex;flex-direction:column;gap:6px">
+            <label>Age</label>
+            <input type="number" id="reg_age" placeholder="Age" min="10" max="100" />
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+            <label>Gender</label>
+            <select id="reg_gender">
+                <option value="">Select</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Others">Others</option>
+            </select>
+        </div>
+    </div>
+
+    <label>I am a...</label>
+    <div class="role-toggle">
+        <button id="roleClientBtn" class="selected" onclick="selectRole('client')">🏃 Client</button>
+        <button id="roleTrainerBtn" onclick="selectRole('trainer')">💪 Trainer</button>
+    </div>
+    <input type="hidden" id="reg_role" value="client" />
+
+    <!-- Trainer picker — only visible for clients -->
+    <div class="trainer-section" id="trainerSection">
+        <label>⚡ Select Your Trainer</label>
+        <select id="reg_trainer">
+            <option value="">-- Choose a trainer --</option>
+        </select>
+        <div class="no-trainer-msg" id="noTrainerMsg" style="display:none">
+            ⚠️ No trainers have registered yet. Ask your trainer to create an account first, then come back to register.
+        </div>
+    </div>
+
+    <label>Password</label>
+    <input type="password" id="reg_password" placeholder="Create a password" />
+
+    <label>Confirm Password</label>
+    <input type="password" id="reg_confirmpassword" placeholder="Confirm password" />
+
+    <button class="btn" onclick="registerUser()">Create Account</button>
+    <p>Already have an account? <span class="link" onclick="showLogin()">Login</span></p>
+</div>
+
+<script>
+    const API_URL = 'http://localhost:3000/api';
+
+    // ── Role toggle ───────────────────────────────────────────────
+    function selectRole(role) {
+        document.getElementById("reg_role").value = role;
+        document.getElementById("roleClientBtn").classList.toggle("selected", role === "client");
+        document.getElementById("roleTrainerBtn").classList.toggle("selected", role === "trainer");
+        document.getElementById("trainerSection").style.display = role === "client" ? "flex" : "none";
+    }
+
+    // ── Fill trainer dropdown ─────────────────────────────────────
+    async function populateTrainers() {
+        try {
+            const res = await fetch(`${API_URL}/auth/trainers`);
+            if (!res.ok) throw new Error("Failed to fetch trainers");
+            const trainers = await res.json();
+            
+            const sel      = document.getElementById("reg_trainer");
+            const noMsg    = document.getElementById("noTrainerMsg");
+
+            sel.innerHTML = '<option value="">-- Choose a trainer --</option>';
+
+            if (trainers.length === 0) {
+                sel.style.display   = "none";
+                noMsg.style.display = "block";
+            } else {
+                sel.style.display   = "block";
+                noMsg.style.display = "none";
+                trainers.forEach(t => {
+                    const o = document.createElement("option");
+                    o.value       = t.id;
+                    o.textContent = `${t.firstname} ${t.lastname} (@${t.username})`;
+                    sel.appendChild(o);
+                });
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    // ── Show / hide boxes ─────────────────────────────────────────
+    function showRegister() {
+        document.getElementById("loginBox").classList.remove("active");
+        document.getElementById("registerBox").classList.add("active");
+        populateTrainers();   // refresh list each time register opens
+    }
+    function showLogin() {
+        document.getElementById("registerBox").classList.remove("active");
+        document.getElementById("loginBox").classList.add("active");
+    }
+
+    // ── Register ──────────────────────────────────────────────────
+    async function registerUser() {
+        const firstname = document.getElementById("reg_firstname").value.trim();
+        const lastname  = document.getElementById("reg_lastname").value.trim();
+        const username  = document.getElementById("reg_username").value.trim();
+        const email     = document.getElementById("reg_email").value.trim();
+        const age       = document.getElementById("reg_age").value.trim();
+        const gender    = document.getElementById("reg_gender").value;
+        const role      = document.getElementById("reg_role").value;
+        const password  = document.getElementById("reg_password").value;
+        const confirmpw = document.getElementById("reg_confirmpassword").value;
+
+        if (!firstname || !lastname || !username || !email || !age || !gender || !password || !confirmpw) {
+            alert("Please fill in all required fields.");
+            return;
+        }
+        if (password !== confirmpw) { alert("Passwords do not match."); return; }
+        if (password.length < 4)    { alert("Password must be at least 4 characters."); return; }
+
+        let assignedTrainerId = null;
+        if (role === "client") {
+            assignedTrainerId = document.getElementById("reg_trainer").value;
+            if (!assignedTrainerId) { alert("Please select your trainer."); return; }
+        }
+
+        try {
+            const res = await fetch(`${API_URL}/auth/register`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    firstname, lastname, username, email, age, gender, role, password, assignedTrainerId
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || "Registration failed.");
+                return;
+            }
+
+            alert(data.message || "Account created successfully. Please log in.");
+            showLogin();
+        } catch (err) {
+            console.error(err);
+            alert("An error occurred during registration. Is the server running?");
+        }
+    }
+
+    // ── Login ─────────────────────────────────────────────────────
+    async function loginUser() {
+        const email    = document.getElementById("loginEmail").value.trim();
+        const password = document.getElementById("loginPassword").value;
+
+        if (!email || !password) { alert("Please enter your email and password."); return; }
+
+        try {
+            const res = await fetch(`${API_URL}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.error || "Login failed.");
+                return;
+            }
+
+            // Save session
+            localStorage.setItem("fittrack_token", data.token);
+            localStorage.setItem("fittrack_session", JSON.stringify(data.user));
+            localStorage.setItem("isLoggedIn", "true");
+
+            window.location.href = data.user.role === "trainer" ? "trainerdashboard.html" : "dashboard.html";
+        } catch (err) {
+            console.error(err);
+            alert("An error occurred during login. Is the server running?");
+        }
+    }
+</script>
+</body>
+</html>

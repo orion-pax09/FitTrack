@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FitTrack – Admin Portal</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: #0a0a0a;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+            background-radial-gradient: circle at center, #1a0a0a 0%, #0a0a0a 100%;
+        }
+
+        .box {
+            background: #111;
+            border: 1px solid #331010;
+            border-radius: 14px;
+            padding: 40px 36px;
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            box-shadow: 0 10px 30px rgba(239, 68, 68, 0.05);
+        }
+
+        h2 { 
+            color: #ef4444; 
+            font-size: 24px; 
+            margin-bottom: 6px; 
+            letter-spacing: 2px; 
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        label { font-size: 13px; color: #aaa; }
+
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s;
+        }
+        input:focus { 
+            border-color: #ef4444; 
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
+        }
+
+        button.btn {
+            width: 100%;
+            padding: 12px;
+            background: #ef4444;
+            color: white;
+            font-weight: bold;
+            font-size: 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background 0.2s;
+        }
+        button.btn:hover { background: #dc2626; }
+
+        p { font-size: 13px; color: #888; text-align: center; }
+        span.link { color: #ef4444; cursor: pointer; font-weight: bold; }
+        span.link:hover { text-decoration: underline; }
+
+        .logo { text-align: center; font-size: 26px; font-weight: 900; letter-spacing: 3px; }
+        .logo span { color: #ef4444; }
+        .sub { text-align: center; font-size: 12px; color: #777; margin-top: -15px; text-transform: uppercase; letter-spacing: 1px; }
+
+        .error-msg {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            display: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="box" id="loginBox">
+    <div class="logo">FIT<span>TRACK</span></div>
+    <p class="sub">Admin Portal</p>
+    <h2>ADMIN LOGIN</h2>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="form-group">
+        <label for="loginEmail">Email Address</label>
+        <input type="email" id="loginEmail" placeholder="admin@fittrack.com" required />
+    </div>
+
+    <div class="form-group">
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" required />
+    </div>
+
+    <button class="btn" onclick="loginAdmin()">Access Dashboard</button>
+    <p><span class="link" onclick="window.location.href='selectionlogin.html'">Back to Role Selection</span></p>
+</div>
+
+<script>
+    const API_URL = 'http://localhost:3000/api';
+
+    async function loginAdmin() {
+        const email = document.getElementById("loginEmail").value.trim();
+        const password = document.getElementById("loginPassword").value;
+        const errorEl = document.getElementById("errorMsg");
+
+        errorEl.style.display = "none";
+        errorEl.textContent = "";
+
+        if (!email || !password) { 
+            showError("Please enter both email and password."); 
+            return; 
+        }
+
+        try {
+            const res = await fetch(`${API_URL}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+                showError(data.error || "Login failed.");
+                return;
+            }
+
+            if (data.user.role !== "admin") {
+                showError("Access denied. Only administrators can log in here.");
+                return;
+            }
+
+            // Save session
+            localStorage.setItem("fittrack_token", data.token);
+            localStorage.setItem("fittrack_session", JSON.stringify(data.user));
+            localStorage.setItem("isLoggedIn", "true");
+
+            window.location.href = "admindashboard.html";
+        } catch (err) {
+            console.error(err);
+            showError("An error occurred during login. Is the server running?");
+        }
+    }
+
+    function showError(msg) {
+        const errorEl = document.getElementById("errorMsg");
+        errorEl.textContent = msg;
+        errorEl.style.display = "block";
+    }
+</script>
+</body>
+</html>

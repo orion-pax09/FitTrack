@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body bgcolor="BLACK">
+    <div class="login-box" id="loginBox">
+        <h2 >LOGIN</h2>
+        <label>Email </label>
+        <input type="text" placeholder="Enter your email" id="email" required>
+        <label>Password</label>
+        <input type="password" placeholder="Enter your password" id=""password required>
+        <button onclick="loginUser()">Login</button>
+        <p>Don't have an account?
+        <span onclick="showRegister()">Register</span>
+        </p>
+    </div>
+    <div class="register-box" id="registerBox">
+        <form id="Registrationform">
+            <h2> Registration form </h2>  
+            <label>First name</label>
+            <input type="text" id="firstname" placeholder="Enter your first name" required>
+            <label>Middle name:</label>
+            <input type="text" name="Middle_name" id="Middle_name" placeholder="Enter your middle name">
+            <label>Last name</label> 
+            <input type="text" id="lastname" placeholder="Enter the last name" required>
+            <label>User name</label>
+            <input type="text" id="username" placeholder="Enter the username" required >
+            <label>Age</label>
+            <input type="number" id="age" placeholder="Enter your age" required>
+            <label>Date of birth</label>
+            <input type="datetime-local" id="birthday" placeholder=" your date of birth" required>
+            <label>Experience</label>
+            <br>
+            <select name="experience" id="experience">
+                <option value="">Select experience</option>
+                <option value="Beginner">Beginnner (0-6 month) </option>
+                <option value="Beginner">intermediate (6 month - 2 year) </option>                
+                <option value="Beginner">Pro (2+ years) </option>
+            </select>
+            <label>Select the gender</label>
+            <br>
+            <select name="gender" id="gender">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Others">Others</option>
+            </select>
+            <br>
+            <label>Password</label>
+            <input type="password" id="password" placeholder="Enter new password">
+            <label>Confirm password</label>
+            <input type="password" id="confirmpassword" placeholder="Confirm new password">
+            <button>Register</button>
+            <p>Already have an account?
+                <span onclick="showLogin()">Login</span>
+            </p>
+        </form>
+    </div>
+</body>
+</html> 
+<script>
+function showRegister() {
+    document.getElementById("loginBox").style.display = "none";
+    document.getElementById("registerBox").style.display = "flex";
+}
+
+function showLogin() {
+    document.getElementById("loginBox").style.display = "flex";
+    document.getElementById("registerBox").style.display = "none";
+}
+document.getElementById("Registrationform").addEventListener("submit",function(e){
+    e.preventDefault();
+    let email = document.getElementById("email").value.trim();
+    let password = document.getElementById("password").value.trim();
+    let firstname = document.getElementById("firstname").value.trim();
+    let middlename = document.getElementById("Middle_name").value.trim();
+    let lastname = document.getElementById("lastname").value.trim();
+    let username = document.getElementById("usernae").value.trim();
+    let Age = document.getElementById("age").value.trim();
+    let Password = document.getElementById("password").value.trim();
+    let confirmpass = document.getElementById("confirmpassword").value.trim();
+    let Gender = document.getElementById("gender").value.trim();
+    if (!lastname||!firstname||!middlename||!Gender||!Password||!confirmpass||!Age){
+        alert("Please fill all required fields");
+        return;
+    }
+    if (Password!=confirmpass){
+        alert("Password don't match");
+    }
+    alert("Registration successfull");
+    showLogin();
+    document.getElementById("Registrationform").reset();
+    });
+    function loginUser() {
+    let email = document.querySelector("input[type='text']").value.trim();
+    let password = document.querySelector("input[type='password']").value.trim();
+
+    if (!email || !password) {
+        alert("Please fill all fields");
+        return;
+    }
+
+    if (email === "admin@gmail.com" && password === "1234") {
+        
+        localStorage.setItem("isLoggedIn", "true");
+
+        window.location.href = "trainerdashboard.html";
+
+    } else {
+        alert("Invalid email or password");
+    }
+}
+</script>

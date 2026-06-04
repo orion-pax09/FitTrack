@@ -1,0 +1,10 @@
+node_modules/
+.env
+*.db
+*.sqlite
+*.sqlite3
+dist/
+build/
+uploads/
+coverage/
+npm-debug.log

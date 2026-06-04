@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exercise Library – FitTrack</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="../../backend/config/fittrack-db.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #09090b; 
+      --surface: #18181b; 
+      --surface2: #24242b;
+      --border: #27272a; 
+      --border2: #3f3f46;
+      --text: #fafafa; 
+      --muted: #71717a;
+      --yellow: #fbbf24; 
+      --yellow-hover: #ca8a04; 
+      --yellow-dim: rgba(251, 191, 36, 0.12);
+      --blue: #3b82f6; 
+      --green: #22c55e; 
+      --red: #ef4444;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+
+    /* SIDEBAR */
+    .sidebar { position: fixed; left: 0; top: 0; width: 260px; height: 100vh; background: #0b0b0b; border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 16px; z-index: 100; }
+    .logo-wrap { display: flex; align-items: center; gap: 12px; padding: 0 8px; margin-bottom: 32px; }
+    .logo-icon { width: 40px; height: 40px; background: var(--yellow); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .logo-text { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: 2px; }
+    .logo-text span { color: var(--yellow); }
+    .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+    .menu { list-style: none; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .menu li { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 10px; color: var(--muted); cursor: pointer; font-size: 13.5px; font-weight: 500; transition: all .2s; }
+    .menu li:hover { background: var(--surface); color: var(--text); }
+    .menu li.active { background: var(--yellow); color: #000; font-weight: 700; }
+    .menu li .icon { font-size: 15px; width: 18px; text-align: center; }
+    .trainer-box { margin-top: auto; background: #1a1500; border: 1px solid rgba(251,191,36,0.2); border-radius: 12px; padding: 14px; }
+    .trainer-box .label { font-size: 10px; color: var(--yellow); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .trainer-box .name  { font-size: 14px; font-weight: 700; }
+
+    /* MAIN */
+    .main { margin-left: 260px; flex: 1; padding: 40px 28px; overflow-y: auto; display: flex; flex-direction: column; }
+    .logout-btn { position: fixed; top: 16px; right: 20px; background: var(--yellow); color: #000; font-weight: 700; font-size: 13px; padding: 9px 20px; border-radius: 8px; border: none; cursor: pointer; z-index: 200; font-family: 'DM Sans', sans-serif; }
+    .logout-btn:hover { opacity: 0.85; }
+
+    .header { margin-bottom: 32px; }
+    .header h1 { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; margin-bottom: 6px; }
+    .header p { color: var(--muted); font-size: .95rem; }
+
+    /* SEARCH & FILTER BAR */
+    .controls-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; margin-bottom: 24px;
+    }
+    .form-row { display: flex; gap: 16px; flex-wrap: wrap; }
+    .form-group { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 8px; }
+    .form-group.search-group { flex: 2; }
+    label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+    input, select {
+      background: #09090b; border: 1px solid var(--border); border-radius: 10px;
+      padding: 12px 16px; color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif;
+      outline: none; transition: border-color .2s;
+    }
+    input:focus, select:focus { border-color: var(--yellow); }
+    select option { background: var(--surface); }
+
+    /* VIDEOS GRID */
+    .videos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; margin-bottom: 32px; }
+    .video-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+      display: flex; flex-direction: column; transition: transform .2s, border-color .2s; cursor: pointer;
+    }
+    .video-card:hover { transform: translateY(-3px); border-color: var(--yellow); }
+    
+    .v-thumb { width: 100%; height: 180px; background: #000; position: relative; overflow: hidden; }
+    .v-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .v-play-btn {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 52px; height: 52px; background: var(--yellow); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 20px; color: #000;
+      box-shadow: 0 4px 15px rgba(251, 191, 36, 0.4); transition: transform .2s;
+    }
+    .video-card:hover .v-play-btn { transform: translate(-50%, -50%) scale(1.1); }
+
+    .v-info { padding: 20px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .v-cat { font-size: 11px; font-weight: 700; color: var(--yellow); text-transform: uppercase; letter-spacing: 0.5px; }
+    .v-title { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; line-height: 1.4; }
+    .v-desc { font-size: 13px; color: var(--muted); line-height: 1.5; flex: 1; }
+
+    .no-videos { text-align: center; color: var(--muted); padding: 60px 20px; font-size: 15px; grid-column: 1 / -1; }
+
+    /* VIDEO MODAL */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(4px);
+      z-index: 1000; display: none; align-items: center; justify-content: center;
+    }
+    .modal {
+      background: #000; border: 1px solid var(--border); border-radius: 16px;
+      width: 90%; max-width: 800px; overflow: hidden; display: flex; flex-direction: column;
+      animation: zoomIn .3s ease;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .modal-header h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.15rem; }
+    .modal-close { background: none; border: none; font-size: 24px; color: var(--muted); cursor: pointer; }
+    .modal-close:hover { color: var(--text); }
+    .video-container { position: relative; width: 100%; padding-bottom: 56.25%; /* 16:9 */ height: 0; }
+    .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+
+    @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+  </style>
+</head>
+<body>
+
+<button class="logout-btn" onclick="FitTrackDB.logout()">Logout</button>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo-wrap">
+    <div class="logo-icon">🏋️</div>
+    <div>
+      <div class="logo-text">FIT<span>TRACK</span></div>
+      <div class="logo-sub">FITNESS PORTAL</div>
+    </div>
+  </div>
+  <ul class="menu">
+    <li onclick="location.href='dashboard.html'"><span class="icon">🏠</span> Dashboard</li>
+    <li onclick="location.href='bmi-calculator.html'"><span class="icon">📊</span> BMI Calculator</li>
+    <li onclick="location.href='nutrition.html'"><span class="icon">🥗</span> Nutrition</li>
+    <li onclick="location.href='progress.html'"><span class="icon">📈</span> Progress</li>
+    <li onclick="location.href='chat.html'"><span class="icon">💬</span> Trainer Chat</li>
+    <li class="active"><span class="icon">🏃</span> Exercise Library</li>
+    <li onclick="location.href='workout-suggestion.html'"><span class="icon">🎯</span> Workout Plan</li>
+    <li onclick="location.href='membership.html'"><span class="icon">🏅</span> Membership</li>
+  </ul>
+  <div class="trainer-box" id="trainerBox" style="display:none">
+    <div class="label">⚡ Your Trainer</div>
+    <div class="name" id="trainerName"></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="header">
+    <h1>Exercise & Video Library</h1>
+    <p>Watch guided exercise tutorials and tutorial videos uploaded by our expert coaches</p>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls-card">
+    <div class="form-row">
+      <div class="form-group search-group">
+        <label for="search">Search Exercises</label>
+        <input type="text" id="search" placeholder="Type exercise name, muscles targeted..." oninput="loadTutorials()" />
+      </div>
+      <div class="form-group">
+        <label for="category">Filter Category</label>
+        <select id="category" onchange="loadTutorials()">
+          <option value="">All Categories</option>
+          <option value="Strength">Strength</option>
+          <option value="Cardio">Cardio</option>
+          <option value="HIIT">HIIT</option>
+          <option value="Yoga">Yoga</option>
+          <option value="Nutrition">Nutrition</option>
+          <option value="Recovery">Recovery</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIDEOS GRID -->
+  <div class="videos-grid" id="videosGrid">
+    <!-- Populated via API -->
+  </div>
+</div>
+
+<!-- VIDEO MODAL -->
+<div class="modal-overlay" id="videoModal" onclick="closeVideoModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 id="modalTitle">Video Player</h3>
+      <button class="modal-close" onclick="closeVideoModal()">&times;</button>
+    </div>
+    <div class="video-container" id="videoContainer">
+      <iframe id="videoIframe" src="" allowfullscreen allow="autoplay"></iframe>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ─── AUTH & SESSION ───
+  const session = FitTrackDB.requireClient();
+  if (session && session.assignedTrainerName) {
+    document.getElementById("trainerBox").style.display = "block";
+    document.getElementById("trainerName").textContent  = session.assignedTrainerName;
+  }
+
+  // Helper to extract YouTube video ID and construct standard embed and thumbnail URLs on client-side
+  function getYoutubeDetails(url) {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    if (match && match[2].length === 11) {
+      const videoId = match[2];
+      return {
+        embedUrl: `https://www.youtube.com/embed/${videoId}`,
+        thumbnailUrl: `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+      };
+    }
+    return {
+      embedUrl: url,
+      thumbnailUrl: null
+    };
+  }
+
+  // ─── LOAD TUTORIALS ───
+  async function loadTutorials() {
+    const grid = document.getElementById("videosGrid");
+    const category = document.getElementById("category").value;
+    const search = document.getElementById("search").value.trim();
+
+    try {
+      const tutorials = await FitTrackDB.getPublicTutorials(category, search);
+      
+      if (tutorials.length === 0) {
+        grid.innerHTML = `<div class="no-videos">No tutorial videos found matching your criteria.</div>`;
+        return;
+      }
+
+      grid.innerHTML = tutorials.map(t => {
+        const isLocal = t.video_url.includes('/uploads/');
+        let thumbContent;
+        if (isLocal) {
+          thumbContent = `
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; background:linear-gradient(135deg, #1e1e24, #121216); color:var(--yellow); font-size:28px; gap:8px;">
+              <span>📹</span>
+              <span style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:600; letter-spacing:0.5px;">Local Video</span>
+            </div>
+            <div class="v-play-btn">▶</div>
+          `;
+        } else {
+          const details = getYoutubeDetails(t.video_url);
+          const thumbSrc = t.thumbnail_url || details.thumbnailUrl || 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?q=80&w=400';
+          thumbContent = `
+            <img src="${thumbSrc}" alt="${t.title}" />
+            <div class="v-play-btn">▶</div>
+          `;
+        }
+
+        return `
+          <div class="video-card" onclick="openVideoModal('${t.video_url}', '${t.title}')">
+            <div class="v-thumb">
+              ${thumbContent}
+            </div>
+            <div class="v-info">
+              <span class="v-cat">${t.category}</span>
+              <h3 class="v-title">${t.title}</h3>
+              <p class="v-desc">${t.description || 'No description provided.'}</p>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch (err) {
+      grid.innerHTML = `<div class="no-videos" style="color:var(--red);">Could not load tutorials. Is the backend server running?</div>`;
+      console.error(err);
+    }
+  }
+
+  // ─── MODAL CONTROLS ───
+  function openVideoModal(url, title) {
+    document.getElementById("modalTitle").textContent = title;
+    
+    const isLocal = url.includes('/uploads/');
+    
+    if (isLocal) {
+      document.getElementById("videoContainer").innerHTML = `
+        <video src="${url}" controls autoplay style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; outline: none; background: #000; border-radius: 8px;"></video>
+      `;
+    } else {
+      const details = getYoutubeDetails(url);
+      const videoId = url.match(/(?:shorts\/|v=|\/embed\/|youtu.be\/)([a-zA-Z0-9_-]{11})/) ? url.match(/(?:shorts\/|v=|\/embed\/|youtu.be\/)([a-zA-Z0-9_-]{11})/)[1] : null;
+      
+      if (window.location.protocol === "file:") {
+        // Local file protocol fallback
+        const watchUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : url;
+        document.getElementById("videoContainer").innerHTML = `
+          <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: var(--surface); padding: 20px; box-sizing: border-box; border-radius: 8px;">
+            <div style="font-size: 32px;">⚠️</div>
+            <div style="font-weight: 700; font-size: 15px;">Local Browser Restriction</div>
+            <p style="color: var(--muted); font-size: 12px; max-width: 400px; text-align: center; line-height: 1.5; margin: 0 10px;">
+              YouTube prevents inline embeds on pages opened via <code>file:///</code>. Click below to play the video directly on YouTube.
+            </p>
+            <a href="${watchUrl}" target="_blank" class="btn" style="text-decoration: none; padding: 10px 20px; font-weight: bold; background: var(--yellow); color: #000; border-radius: 8px; font-size: 13px; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif;">
+              Play on YouTube ↗
+            </a>
+          </div>
+        `;
+      } else {
+        // Standard embed
+        let embedUrl = details.embedUrl;
+        if (embedUrl.includes('youtube.com/embed/')) {
+          embedUrl += "?autoplay=1";
+        }
+        document.getElementById("videoContainer").innerHTML = `
+          <iframe id="videoIframe" src="${embedUrl}" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+        `;
+      }
+    }
+    
+    document.getElementById("videoModal").style.display = "flex";
+  }
+
+  function closeVideoModal() {
+    // Clear video container to stop playback
+    document.getElementById("videoContainer").innerHTML = "";
+    document.getElementById("videoModal").style.display = "none";
+  }
+
+  // Initial load
+  loadTutorials();
+</script>
+</body>
+</html>

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BMI Calculator – FitTrack</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="../../backend/config/fittrack-db.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#09090b; --surface:#18181b; --border:#27272a; --text:#fafafa; --muted:#71717a;
+      --yellow:#eab308; --yellow-hover:#ca8a04; --blue:#3b82f6; --green:#22c55e; --red:#ef4444; --input-bg:#09090b;
+    }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; }
+
+    /* SIDEBAR */
+    .sidebar { position:fixed; left:0; top:0; width:260px; height:100vh; background:#0b0b0b; border-right:1px solid var(--border); display:flex; flex-direction:column; padding:24px 16px; z-index:100; }
+    .logo-wrap { display:flex; align-items:center; gap:12px; padding:0 8px; margin-bottom:32px; }
+    .logo-icon { width:40px; height:40px; background:var(--yellow); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+    .logo-text { font-family:'Syne',sans-serif; font-size:18px; font-weight:800; letter-spacing:2px; }
+    .logo-text span { color:var(--yellow); }
+    .logo-sub { font-size:10px; color:var(--muted); letter-spacing:1px; }
+    .menu { list-style:none; flex:1; display:flex; flex-direction:column; gap:4px; }
+    .menu li { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:10px; color:var(--muted); cursor:pointer; font-size:13.5px; font-weight:500; transition:all .2s; }
+    .menu li:hover { background:#18181b; color:var(--text); }
+    .menu li.active { background:var(--yellow); color:#000; font-weight:700; }
+    .menu li .icon { font-size:15px; width:18px; text-align:center; }
+    .trainer-box { margin-top:auto; background:#1a1500; border:1px solid rgba(234,179,8,0.2); border-radius:12px; padding:14px; }
+    .trainer-box .label { font-size:10px; color:var(--yellow); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+    .trainer-box .name  { font-size:14px; font-weight:700; }
+
+    /* MAIN */
+    .main { margin-left:260px; flex:1; padding:40px 28px; overflow-y:auto; }
+    .logout-btn { position:fixed; top:16px; right:20px; background:var(--yellow); color:#000; font-weight:700; font-size:13px; padding:9px 20px; border-radius:8px; border:none; cursor:pointer; z-index:200; font-family:'DM Sans',sans-serif; }
+
+    .header { margin-bottom:32px; }
+    .header h1 { font-family:'Syne',sans-serif; font-size:2rem; font-weight:800; margin-bottom:6px; }
+    .header p { color:var(--muted); font-size:.95rem; }
+
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:24px; }
+    @media(max-width:700px){ .grid-2{ grid-template-columns:1fr; } }
+    .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; }
+    @media(max-width:700px){ .grid-3{ grid-template-columns:1fr; } }
+
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:32px; }
+    .card-sm { padding:24px; }
+    .card-head { display:flex; align-items:center; gap:14px; margin-bottom:28px; }
+    .icon-box { width:48px; height:48px; background:var(--yellow); border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .icon-box svg { width:22px; height:22px; color:#000; }
+    .icon-box-sm { width:40px; height:40px; background:rgba(234,179,8,0.12); border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:16px; }
+    .icon-box-sm svg { width:18px; height:18px; color:var(--yellow); }
+    .card-head h2 { font-family:'Syne',sans-serif; font-size:1.35rem; font-weight:700; }
+    .card h3 { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:700; margin-bottom:20px; }
+
+    .form-group { margin-bottom:22px; }
+    label { display:block; font-size:.85rem; font-weight:600; margin-bottom:10px; }
+    input[type="number"] {
+      width:100%; background:var(--input-bg); border:1px solid var(--border); border-radius:10px;
+      padding:14px 16px; color:var(--text); font-size:.95rem; font-family:'DM Sans',sans-serif; outline:none; transition:border-color .2s;
+      -moz-appearance:textfield;
+    }
+    input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance:none; }
+    input[type="number"]::placeholder { color:var(--muted); }
+    input[type="number"]:focus { border-color:var(--yellow); }
+
+    button.calc-btn {
+      width:100%; background:var(--yellow); color:#000; border:none; border-radius:10px;
+      padding:16px; font-size:.95rem; font-weight:700; font-family:'DM Sans',sans-serif;
+      cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;
+      transition:background .2s, transform .1s; margin-top:6px;
+    }
+    button.calc-btn:hover { background:var(--yellow-hover); }
+    button.calc-btn:active { transform:scale(0.98); }
+
+    .result-box { margin-top:28px; padding:28px; background:var(--input-bg); border:1px solid var(--border); border-radius:12px; text-align:center; display:none; }
+    .result-box.show { display:block; animation:fadeUp .3s ease; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+    .result-label { font-size:.8rem; color:var(--muted); margin-bottom:6px; }
+    .result-value { font-family:'Syne',sans-serif; font-size:4rem; font-weight:800; line-height:1; margin-bottom:18px; }
+
+    .badge { display:inline-flex; align-items:center; gap:8px; padding:8px 18px; border-radius:999px; font-size:.9rem; font-weight:600; }
+    .badge svg { width:18px; height:18px; }
+    .saved-notice { margin-top:14px; font-size:.8rem; color:var(--green); font-weight:600; }
+
+    .blue   { color:var(--blue); }
+    .green  { color:var(--green); }
+    .yellow { color:var(--yellow); }
+    .red    { color:var(--red); }
+    .badge-blue   { background:rgba(59,130,246,0.12);  color:var(--blue); }
+    .badge-green  { background:rgba(34,197,94,0.12);   color:var(--green); }
+    .badge-yellow { background:rgba(234,179,8,0.12);   color:var(--yellow); }
+    .badge-red    { background:rgba(239,68,68,0.12);   color:var(--red); }
+
+    .right-col { display:flex; flex-direction:column; gap:24px; }
+    .gauge-track { position:relative; height:48px; background:linear-gradient(to right,#3b82f6,#22c55e,#eab308,#ef4444); border-radius:10px; margin-bottom:8px; }
+    .gauge-marker { position:absolute; top:0; height:100%; width:3px; background:#fff; border-radius:2px; box-shadow:0 0 8px rgba(255,255,255,.6); transition:left .5s cubic-bezier(.4,0,.2,1); display:none; }
+    .gauge-marker.show { display:block; }
+    .gauge-label { position:absolute; top:-32px; left:50%; transform:translateX(-50%); background:#fff; color:#000; padding:2px 8px; border-radius:6px; font-size:.75rem; font-weight:700; white-space:nowrap; }
+    .gauge-ticks { display:flex; justify-content:space-between; font-size:.75rem; color:var(--muted); margin-top:6px; }
+
+    .cat-item { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; border-radius:10px; margin-bottom:12px; font-weight:600; font-size:.9rem; }
+    .cat-item:last-child { margin-bottom:0; }
+    .cat-blue   { background:rgba(59,130,246,0.1);  border:1px solid rgba(59,130,246,0.2); }
+    .cat-green  { background:rgba(34,197,94,0.1);   border:1px solid rgba(34,197,94,0.2); }
+    .cat-yellow { background:rgba(234,179,8,0.1);   border:1px solid rgba(234,179,8,0.2); }
+    .cat-red    { background:rgba(239,68,68,0.1);   border:1px solid rgba(239,68,68,0.2); }
+
+    .reco-card { background:linear-gradient(135deg,rgba(234,179,8,.1),rgba(202,138,4,.1)); border:1px solid rgba(234,179,8,.25); border-radius:16px; padding:32px; display:none; margin-bottom:24px; }
+    .reco-card.show { display:flex; gap:18px; animation:fadeUp .35s ease; }
+    .reco-card .icon-box { flex-shrink:0; }
+    .reco-card h3 { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:700; margin-bottom:10px; }
+    .reco-card p { color:#d4d4d8; font-size:.9rem; line-height:1.65; }
+
+    .info-card h4 { font-family:'Syne',sans-serif; font-weight:700; margin-bottom:8px; font-size:.95rem; }
+    .info-card p { font-size:.82rem; color:var(--muted); line-height:1.6; }
+
+    /* BMI History */
+    .history-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; margin-bottom:24px; }
+    .history-card h3 { font-family:'Syne',sans-serif; font-size:1.1rem; font-weight:700; margin-bottom:18px; }
+    .history-item { background:var(--input-bg); border:1px solid var(--border); border-radius:10px; padding:14px 18px; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; }
+    .history-item .bmi-num { font-family:'Syne',sans-serif; font-size:1.4rem; font-weight:800; }
+    .history-item .bmi-date { font-size:.78rem; color:var(--muted); }
+    .no-history { color:var(--muted); font-size:.85rem; }
+
+    svg { display:inline-block; vertical-align:middle; }
+  </style>
+</head>
+<body>
+<button class="logout-btn" onclick="FitTrackDB.logout()">Logout</button>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo-wrap">
+    <div class="logo-icon">🏋️</div>
+    <div>
+      <div class="logo-text">FIT<span>TRACK</span></div>
+      <div class="logo-sub">FITNESS PORTAL</div>
+    </div>
+  </div>
+  <ul class="menu">
+    <li onclick="location.href='dashboard.html'"><span class="icon">🏠</span> Dashboard</li>
+    <li class="active"><span class="icon">📊</span> BMI Calculator</li>
+    <li onclick="location.href='nutrition.html'"><span class="icon">🥗</span> Nutrition</li>
+    <li onclick="location.href='progress.html'"><span class="icon">📈</span> Progress</li>
+    <li onclick="location.href='chat.html'"><span class="icon">💬</span> Trainer Chat</li>
+    <li onclick="location.href='exercise-library.html'"><span class="icon">🏃</span> Exercise Library</li>
+    <li onclick="location.href='workout-suggestion.html'"><span class="icon">🎯</span> Workout Plan</li>
+    <li onclick="location.href='membership.html'"><span class="icon">🏅</span> Membership</li>
+    <li><span class="icon">📋</span> Workout History</li>
+  </ul>
+  <div class="trainer-box" id="trainerBox" style="display:none">
+    <div class="label">⚡ Your Trainer</div>
+    <div class="name" id="trainerName"></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="header">
+    <h1>BMI Calculator</h1>
+    <p>Calculate your Body Mass Index — results are saved to your profile and reflected on the dashboard</p>
+  </div>
+
+  <div class="grid-2">
+    <!-- Left: Calculator -->
+    <div class="card">
+      <div class="card-head">
+        <div class="icon-box">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
+        </div>
+        <h2>Calculate Your BMI</h2>
+      </div>
+      <div class="form-group">
+        <label for="height">Height (cm)</label>
+        <input type="number" id="height" placeholder="Enter your height in centimeters" min="50" max="300" />
+      </div>
+      <div class="form-group">
+        <label for="weight">Weight (kg)</label>
+        <input type="number" id="weight" placeholder="Enter your weight in kilograms" min="1" max="500" />
+      </div>
+      <button class="calc-btn" onclick="calculateBMI()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>
+        Calculate BMI
+      </button>
+      <div class="result-box" id="resultBox">
+        <p class="result-label">Your BMI</p>
+        <div class="result-value" id="bmiValue">—</div>
+        <span class="badge" id="bmiBadge"></span>
+      <p class="saved-notice" id="savedNotice" style="display:none">
+          ✅ Saved! 
+          <a href="dashboard.html" style="color:#eab308;text-decoration:underline;font-weight:700;">View Dashboard</a>
+          &nbsp;·&nbsp;
+          <a href="progress.html" style="color:#eab308;text-decoration:underline;font-weight:700;">View Progress</a>
+        </p>
+      </div>
+    </div>
+
+    <!-- Right: Scale + Categories -->
+    <div class="right-col">
+      <div class="card">
+        <h3>BMI Scale</h3>
+        <div style="padding-top:36px;">
+          <div class="gauge-track">
+            <div class="gauge-marker" id="gaugeMarker">
+              <span class="gauge-label" id="gaugeLabel"></span>
+            </div>
+          </div>
+          <div class="gauge-ticks">
+            <span>10</span><span>20</span><span>30</span><span>40</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>BMI Categories</h3>
+        <div class="cat-item cat-blue">  <span>Underweight</span><span class="blue">&lt; 18.5</span></div>
+        <div class="cat-item cat-green"> <span>Normal</span>     <span class="green">18.5 – 24.9</span></div>
+        <div class="cat-item cat-yellow"><span>Overweight</span> <span class="yellow">25 – 29.9</span></div>
+        <div class="cat-item cat-red">   <span>Obese</span>      <span class="red">≥ 30</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recommendation -->
+  <div class="reco-card" id="recoCard">
+    <div class="icon-box">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+    </div>
+    <div>
+      <h3>Fitness Recommendations</h3>
+      <p id="recoText"></p>
+    </div>
+  </div>
+
+  <!-- BMI History -->
+  <div class="history-card">
+    <h3>📋 Your BMI History</h3>
+    <div id="bmiHistory"><p class="no-history">No BMI records yet. Calculate your first one above!</p></div>
+  </div>
+
+  <!-- Info cards -->
+  <div class="grid-3">
+    <div class="card card-sm info-card">
+      <div class="icon-box-sm"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+      <h4>About BMI</h4>
+      <p>BMI is a measure of body fat based on height and weight that applies to adult men and women.</p>
+    </div>
+    <div class="card card-sm info-card">
+      <div class="icon-box-sm"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+      <h4>Limitations</h4>
+      <p>BMI doesn't account for muscle mass, bone density, overall body composition, and racial and sex differences.</p>
+    </div>
+    <div class="card card-sm info-card">
+      <div class="icon-box-sm"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+      <h4>Track Progress</h4>
+      <p>Every BMI you calculate is saved automatically and shown in your Progress page.</p>
+    </div>
+  </div>
+
+  <!-- TRAINER WORKOUT SUGGESTIONS -->
+  <div class="history-card" id="workoutSection">
+    <h3>🏋️ Workout Suggestions from Your Trainer</h3>
+    <div id="trainerWorkoutList"><p class="no-history" style="padding:12px 0">Loading your trainer's suggestions...</p></div>
+  </div>
+
+</div>
+
+<script>
+const session = FitTrackDB.requireClient();
+if (session && session.assignedTrainerName) {
+  document.getElementById("trainerBox").style.display = "block";
+  document.getElementById("trainerName").textContent  = session.assignedTrainerName;
+}
+
+async function calculateBMI() {
+  const h = parseFloat(document.getElementById("height").value);
+  const w = parseFloat(document.getElementById("weight").value);
+  if (!h || !w || h <= 0 || w <= 0) { alert("Please enter valid height and weight values."); return; }
+
+  const hm  = h / 100;
+  const bmi = parseFloat((w / (hm * hm)).toFixed(1));
+
+  let cat, badgeClass, badgeIcon;
+  if (bmi < 18.5)      { cat="Underweight"; badgeClass="badge-blue";   badgeIcon=iconAlert(); }
+  else if (bmi < 25)   { cat="Normal";      badgeClass="badge-green";  badgeIcon=iconCheck(); }
+  else if (bmi < 30)   { cat="Overweight";  badgeClass="badge-yellow"; badgeIcon=iconInfo();  }
+  else                 { cat="Obese";        badgeClass="badge-red";    badgeIcon=iconAlert(); }
+
+  // Show result
+  const box = document.getElementById("resultBox");
+  box.classList.add("show");
+  document.getElementById("bmiValue").textContent = bmi;
+  const badge = document.querySelector(".badge");
+  badge.className    = "badge " + badgeClass;
+  badge.innerHTML    = badgeIcon + " " + cat;
+
+  // Gauge
+  const pct = Math.min(Math.max(((bmi-10)/30)*100, 0), 100);
+  document.getElementById("gaugeLabel").textContent = bmi;
+  document.getElementById("gaugeMarker").style.left = pct + "%";
+  document.getElementById("gaugeMarker").classList.add("show");
+
+  // Recommendation
+  document.getElementById("recoCard").classList.add("show");
+  document.getElementById("recoText").textContent = getRecommendation(bmi);
+
+  const btn = document.querySelector(".calc-btn");
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+
+  try {
+    // Save to backend DB — also adds a weight_log entry automatically
+    await FitTrackDB.saveBmi({ heightCm: h, weightKg: w });
+    document.getElementById("savedNotice").style.display = "block";
+    // Notify dashboard to refresh its BMI + weight stat cards
+    window.dispatchEvent(new CustomEvent("fittrack:update"));
+    await renderHistory();
+  } catch(err) {
+    console.error(err);
+    alert("Failed to save BMI. Make sure the backend server is running.");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg> Calculate BMI`;
+  }
+}
+
+function getRecommendation(bmi) {
+  if (bmi < 18.5) return "Consider increasing your calorie intake with nutrient-rich foods and incorporate strength training to build muscle mass.";
+  if (bmi < 25)   return "Great job! Maintain your current lifestyle with regular exercise and a balanced diet to stay healthy.";
+  if (bmi < 30)   return "Focus on a balanced diet and increase your physical activity. Aim for at least 150 minutes of moderate exercise per week.";
+  return "Consult with a healthcare professional for a personalized plan. Focus on gradual weight loss through diet and regular exercise.";
+}
+
+async function renderHistory() {
+  const log = await FitTrackDB.getBmiLog();
+  const el  = document.getElementById("bmiHistory");
+  if (!log || !log.length) { el.innerHTML = '<p class="no-history">No BMI records yet. Calculate your first one above!</p>'; return; }
+  const colorMap = { Underweight:"var(--blue)", Normal:"var(--green)", Overweight:"var(--yellow)", Obese:"var(--red)" };
+  el.innerHTML = log.map(r => `
+    <div class="history-item">
+      <div>
+        <div class="bmi-num" style="color:${colorMap[r.category]||'var(--yellow)'}">${r.bmi}</div>
+        <div class="bmi-date">${new Date(r.recordedAt).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"})}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-weight:700;color:${colorMap[r.category]||'var(--yellow)'}">${r.category}</div>
+        <div class="bmi-date">${r.weightKg}kg &middot; ${r.heightCm}cm</div>
+      </div>
+    </div>`).join("");
+}
+
+async function loadTrainerWorkouts() {
+  const el = document.getElementById("trainerWorkoutList");
+  if (!el) return;
+
+  const API_URL = "http://localhost:3000/api";
+  const token = localStorage.getItem("fittrack_token");
+  const _headers = { "Content-Type": "application/json", "Authorization": "Bearer " + token };
+
+  try {
+    const res = await fetch(`${API_URL}/workouts`, { headers: _headers });
+    if (!res.ok) throw new Error("Failed");
+    const list = await res.json();
+
+    if (!list.length) {
+      el.innerHTML = '<p class="no-history" style="padding:12px 0">No workout suggestions yet — your trainer will add some soon!</p>';
+      return;
+    }
+
+    const colorMap = { Strength:"#fbbf24", Cardio:"#60a5fa", HIIT:"#f87171", Flexibility:"#34d399", Recovery:"#a78bfa", General:"#71717a" };
+    el.innerHTML = list.map(w => {
+      const col = colorMap[w.type] || "#fbbf24";
+      const [meta, ...rest] = (w.description || "").split("\n");
+      const desc = rest.join("\n").trim();
+      return `
+      <div style="background:#09090b;border:1px solid #27272a;border-radius:12px;padding:16px 18px;margin-bottom:10px;display:flex;gap:14px;align-items:flex-start;">
+        <div style="width:10px;height:10px;border-radius:50%;background:${col};margin-top:6px;flex-shrink:0;"></div>
+        <div style="flex:1;">
+          <div style="font-weight:700;font-size:.95rem;margin-bottom:4px;">${w.title}</div>
+          ${meta ? `<div style="font-size:.78rem;color:#a1a1aa;margin-bottom:4px;">${meta}</div>` : ""}
+          ${desc ? `<div style="font-size:.78rem;color:#71717a;white-space:pre-wrap;">${desc}</div>` : ""}
+        </div>
+        <span style="background:rgba(251,191,36,.12);color:${col};font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:99px;white-space:nowrap;">${w.type || "General"}</span>
+      </div>`;
+    }).join("");
+  } catch(err) {
+    el.innerHTML = '<p class="no-history" style="padding:12px 0;color:#f87171">Could not load workout suggestions.</p>';
+    console.error(err);
+  }
+}
+
+function iconAlert() { return `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`; }
+function iconCheck() { return `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`; }
+function iconInfo()  { return `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`; }
+
+document.addEventListener("keydown", e => { if (e.key === "Enter") calculateBMI(); });
+
+// Load on page start
+renderHistory();
+loadTrainerWorkouts();
+</script>
+</body>
+</html>

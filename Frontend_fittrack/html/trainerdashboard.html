@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FitTrack – Trainer Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080808;
+      --sidebar: #0b0b0b;
+      --surface: #111113;
+      --surface2: #18181b;
+      --border: #222226;
+      --border2: #2a2a2f;
+      --text: #f4f4f5;
+      --muted: #71717a;
+      --yellow: #fbbf24;
+      --yellow-dim: rgba(251,191,36,0.12);
+      --green: #22c55e;
+      --blue: #60a5fa;
+      --red: #f87171;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+    }
+
+    /* ─── SIDEBAR ─── */
+    .sidebar {
+      position: fixed; left:0; top:0;
+      width:260px; height:100vh;
+      background:var(--sidebar);
+      border-right:1px solid var(--border);
+      display:flex; flex-direction:column;
+      padding:24px 16px; z-index:100;
+    }
+    .logo-wrap { display:flex; align-items:center; gap:12px; padding:0 8px; margin-bottom:32px; }
+    .logo-icon { width:40px;height:40px;background:var(--yellow);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0; }
+    .logo-text { font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:2px; }
+    .logo-text span { color:var(--yellow); }
+    .logo-sub  { font-size:10px;color:var(--muted);letter-spacing:1px; }
+
+    .menu { list-style:none;flex:1;display:flex;flex-direction:column;gap:4px; }
+    .menu li {
+      display:flex;align-items:center;gap:12px;
+      padding:11px 14px;border-radius:10px;
+      color:var(--muted);cursor:pointer;font-size:13.5px;font-weight:500;transition:all .2s;
+    }
+    .menu li:hover { background:var(--surface2);color:var(--text); }
+    .menu li.active { background:var(--yellow);color:#000;font-weight:700; }
+    .menu li .icon { font-size:15px;width:18px;text-align:center; }
+
+    .trainer-profile {
+      background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:auto;
+    }
+    .trainer-profile .tname { font-weight:700;font-size:14px;margin-bottom:2px; }
+    .trainer-profile .trole { font-size:11px;color:var(--yellow); }
+
+    /* ─── MAIN ─── */
+    .main { margin-left:260px;flex:1;padding:32px 28px;overflow-y:auto; }
+
+    .logout-btn {
+      position:fixed;top:16px;right:20px;
+      background:var(--yellow);color:#000;font-weight:700;font-size:13px;
+      padding:9px 20px;border-radius:8px;border:none;cursor:pointer;z-index:200;
+      font-family:'DM Sans',sans-serif;
+    }
+    .logout-btn:hover { opacity:0.85; }
+
+    .page-header { margin-bottom:28px; }
+    .page-header h1 { font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;margin-bottom:4px; }
+    .page-header p  { color:var(--muted);font-size:.9rem; }
+
+    /* Stats */
+    .stats-grid { display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px; }
+    @media(max-width:1100px){.stats-grid{grid-template-columns:repeat(2,1fr);}}
+
+    .stat-card {
+      background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;
+    }
+    .stat-card.yellow { background:linear-gradient(135deg,#fbbf24,#d97706);border:none;color:#000; }
+    .sc-top { display:flex;align-items:center;justify-content:space-between;margin-bottom:14px; }
+    .sc-icon { width:38px;height:38px;border-radius:9px;background:var(--yellow-dim);display:flex;align-items:center;justify-content:center;font-size:17px; }
+    .stat-card.yellow .sc-icon { background:rgba(0,0,0,.15); }
+    .sc-val { font-family:'Syne',sans-serif;font-size:2.2rem;font-weight:800;line-height:1;margin-bottom:4px; }
+    .sc-label { font-size:.8rem;color:var(--muted); }
+    .stat-card.yellow .sc-label { color:rgba(0,0,0,.55); }
+
+    /* Two-col layout */
+    .two-col { display:grid;grid-template-columns:1fr 340px;gap:24px;margin-bottom:24px; }
+    @media(max-width:1000px){.two-col{grid-template-columns:1fr;}}
+
+    /* Workout suggestion form */
+    .form-card {
+      background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:26px;
+    }
+    .form-card h3 { font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:20px; }
+    .form-group { margin-bottom:16px; }
+    .form-group label { display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:7px;text-transform:uppercase;letter-spacing:.6px; }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width:100%;background:#09090b;border:1px solid var(--border2);border-radius:9px;
+      padding:11px 14px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;
+      outline:none;transition:border .2s;resize:vertical;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color:var(--yellow); }
+    .form-group select option { background:#111; }
+
+    .submit-btn {
+      width:100%;padding:13px;background:var(--yellow);color:#000;font-weight:700;font-size:14px;
+      font-family:'DM Sans',sans-serif;border:none;border-radius:9px;cursor:pointer;transition:opacity .2s;
+    }
+    .submit-btn:hover { opacity:.85; }
+
+    .success-msg {
+      display:none;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);
+      border-radius:8px;padding:12px;text-align:center;color:var(--green);font-size:14px;font-weight:600;margin-top:12px;
+    }
+
+    /* Recent suggestions sent */
+    .suggestions-card {
+      background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;
+    }
+    .suggestions-card h3 { font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;margin-bottom:16px; }
+    .sug-item {
+      background:#09090b;border:1px solid var(--border2);border-radius:9px;
+      padding:12px 14px;margin-bottom:10px;
+    }
+    .sug-item:last-child{margin-bottom:0;}
+    .sug-header { display:flex;align-items:center;justify-content:space-between;margin-bottom:4px; }
+    .sug-header strong { font-size:.88rem; }
+    .sug-tag { font-size:10px;font-weight:700;padding:2px 9px;border-radius:99px;background:var(--yellow-dim);color:var(--yellow); }
+    .sug-meta { font-size:.75rem;color:var(--muted); }
+    .sug-del { background:rgba(248,113,113,.1);color:var(--red);border:none;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif; }
+    .no-sug { color:var(--muted);font-size:.85rem; }
+
+    /* Client cards */
+    .clients-section h3 { font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:16px; }
+    .clients-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px; }
+
+    .client-card {
+      background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;
+      display:flex;align-items:center;gap:14px;transition:border-color .2s;
+    }
+    .client-card:hover { border-color:var(--border2); }
+    .av { width:46px;height:46px;border-radius:50%;background:var(--yellow);color:#000;font-weight:900;font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .client-info { flex:1; }
+    .client-info h4 { font-size:14px;font-weight:700;margin-bottom:2px; }
+    .client-info .uname { font-size:11px;color:var(--yellow);margin-bottom:2px; }
+    .client-info .meta  { font-size:11px;color:var(--muted); }
+
+    .chat-btn {
+      background:var(--yellow);color:#000;font-weight:700;font-size:12px;
+      border:none;border-radius:8px;padding:8px 14px;cursor:pointer;
+      font-family:'DM Sans',sans-serif;white-space:nowrap;flex-shrink:0;
+      transition:opacity .2s;
+    }
+    .chat-btn:hover{opacity:.85;}
+
+    .empty-clients { color:var(--muted);font-size:.88rem;padding:20px 0; }
+
+    /* Chart */
+    .chart-card { background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:24px; }
+    .chart-card h3 { font-family:'Syne',sans-serif;font-size:1.05rem;font-weight:700;margin-bottom:20px; }
+
+    @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+    .stat-card,.form-card,.suggestions-card,.clients-section,.chart-card{animation:fadeUp .4s ease both;}
+    .stat-card:nth-child(1){animation-delay:.05s}
+    .stat-card:nth-child(2){animation-delay:.1s}
+    .stat-card:nth-child(3){animation-delay:.15s}
+    .stat-card:nth-child(4){animation-delay:.2s}
+  </style>
+</head>
+<body>
+
+<button class="logout-btn" onclick="logout()">Logout</button>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo-wrap">
+    <div class="logo-icon">🏋️</div>
+    <div>
+      <div class="logo-text">FIT<span>TRACK</span></div>
+      <div class="logo-sub">TRAINER PORTAL</div>
+    </div>
+  </div>
+
+  <ul class="menu">
+    <li class="active"><span class="icon">🏠</span> Dashboard</li>
+    <li onclick="window.location.href='trainer_to_client.html'"><span class="icon">👥</span> View Clients</li>
+    <li id="menuWorkout"><span class="icon">💪</span> Workout Suggestions</li>
+    <li onclick="window.location.href='create-workout-plan.html'"><span class="icon">📝</span> Create Workout Plan</li>
+    <li onclick="window.location.href='chat.html'" id="menuChat"><span class="icon">💬</span> Chat</li>
+  </ul>
+
+  <div class="trainer-profile">
+    <div class="tname" id="tName">Trainer</div>
+    <div class="trole">⚡ Certified Trainer</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="page-header">
+    <h1>Trainer Dashboard</h1>
+    <p>Manage your clients and send workout suggestions</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card yellow">
+      <div class="sc-top"><div class="sc-icon">👥</div></div>
+      <div class="sc-val" id="totalClients">0</div>
+      <div class="sc-label">Total Clients</div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-top"><div class="sc-icon">💪</div></div>
+      <div class="sc-val" id="totalSuggestions">0</div>
+      <div class="sc-label">Suggestions Sent</div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-top"><div class="sc-icon">💬</div></div>
+      <div class="sc-val">—</div>
+      <div class="sc-label">Active Chats</div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-top"><div class="sc-icon">📈</div></div>
+      <div class="sc-val">87%</div>
+      <div class="sc-label">Client Progress</div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="chart-card">
+    <h3>📊 Weekly Client Activity Overview</h3>
+    <canvas id="activityChart" height="160"></canvas>
+  </div>
+
+  <!-- Client Analytics Section -->
+  <div class="chart-card" id="clientAnalytics" style="display:none; border-color: var(--yellow);">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+      <h3 id="analyticsTitle" style="margin:0;">📊 Client Analytics</h3>
+      <button class="sug-del" style="padding: 6px 12px; font-size:12px;" onclick="closeAnalytics()">Close</button>
+    </div>
+    
+    <div class="form-group" style="display:flex; gap:16px; margin-bottom:16px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:150px;">
+        <label>Metric</label>
+        <select id="aMetric" onchange="updateAnalyticsChart()">
+          <option value="weight">Weight (kg)</option>
+          <option value="bmi">BMI</option>
+        </select>
+      </div>
+      <div style="flex:1; min-width:150px;">
+        <label>Time Range</label>
+        <select id="aRange" onchange="updateAnalyticsChart()">
+          <option value="all">All Time</option>
+          <option value="30">Last 30 Days</option>
+          <option value="7">Last 7 Days</option>
+        </select>
+      </div>
+      <div style="flex:1; display:flex; align-items:flex-end; gap:8px; min-width:200px;">
+        <button class="submit-btn" style="padding: 11px; flex:1;" onclick="exportPNG()">Export PNG</button>
+        <button class="submit-btn" style="padding: 11px; flex:1;" onclick="exportCSV()">Export CSV</button>
+      </div>
+    </div>
+    
+    <div id="goalAlert" style="display:none; background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.25); border-radius:8px; padding:12px; text-align:center; color:var(--green); font-size:14px; font-weight:600; margin-bottom:16px;">
+      🎯 Client has reached their target!
+    </div>
+
+    <canvas id="clientChart" height="160"></canvas>
+  </div>
+
+  <!-- Workout Form + Recent Suggestions -->
+  <div class="two-col">
+
+    <!-- Form -->
+    <div class="form-card">
+      <h3>💪 Send Workout Suggestion</h3>
+
+      <div class="form-group">
+        <label>Send To</label>
+        <select id="targetClient">
+          <option value="all">📢 All My Clients</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Workout Title</label>
+        <input type="text" id="wTitle" placeholder="e.g. Upper Body Strength Day" />
+      </div>
+
+      <div class="form-group">
+        <label>Type</label>
+        <select id="wType">
+          <option value="Strength">Strength</option>
+          <option value="Cardio">Cardio</option>
+          <option value="HIIT">HIIT</option>
+          <option value="Yoga">Yoga</option>
+          <option value="Flexibility">Flexibility</option>
+          <option value="Recovery">Recovery</option>
+          <option value="General">General</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Description / Instructions</label>
+        <textarea id="wDesc" rows="4" placeholder="3×10 Squats&#10;3×12 Push-ups&#10;3×10 Deadlifts&#10;20 min Cardio"></textarea>
+      </div>
+
+      <button class="submit-btn" onclick="sendSuggestion()">✅ Send Workout Suggestion</button>
+      <div class="success-msg" id="successMsg">✅ Suggestion sent successfully!</div>
+    </div>
+
+    <!-- Recent sent -->
+    <div class="suggestions-card">
+      <h3>📋 Recent Suggestions</h3>
+      <div id="recentSuggestions"><p class="no-sug">No suggestions sent yet.</p></div>
+    </div>
+
+  </div>
+
+  <!-- Clients -->
+  <div class="clients-section">
+    <h3>👥 Your Clients</h3>
+    <div class="clients-grid" id="clientsGrid">
+      <p class="empty-clients">No clients assigned yet.</p>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ── Auth Guard ────────────────────────────────────────────────
+const session = JSON.parse(localStorage.getItem("fittrack_session") || "null");
+if (!session || session.role !== "trainer") {
+  window.location.href = "index.html";
+}
+
+document.getElementById("tName").textContent = (session.firstname || "") + " " + (session.lastname || "");
+
+// ── Helpers ───────────────────────────────────────────────────
+function getWorkouts() { return JSON.parse(localStorage.getItem("fittrack_workouts_global") || "[]"); }
+function saveWorkouts(w){ localStorage.setItem("fittrack_workouts_global", JSON.stringify(w)); }
+
+let myClients = [];
+
+async function fetchClients() {
+    try {
+        const token = localStorage.getItem("fittrack_token");
+        const res = await fetch("http://localhost:3000/api/auth/clients", {
+            headers: { "Authorization": "Bearer " + token }
+        });
+        if (res.ok) {
+            myClients = await res.json();
+            populateDropdown();
+            updateStats();
+            renderRecent();
+            renderClients();
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+function getMyClients() {
+  return myClients;
+}
+
+// ── Populate client dropdown ───────────────────────────────────
+function populateDropdown() {
+  const sel     = document.getElementById("targetClient");
+  const clients = getMyClients();
+  sel.innerHTML = '<option value="all">📢 All My Clients</option>';
+  clients.forEach(c => {
+    const o = document.createElement("option");
+    o.value       = c.id;
+    o.textContent = c.firstname + " " + c.lastname + " (@" + c.username + ")";
+    sel.appendChild(o);
+  });
+}
+
+// ── Stats ─────────────────────────────────────────────────────
+function updateStats() {
+  const clients = getMyClients();
+  document.getElementById("totalClients").textContent = clients.length;
+  const mine = getWorkouts().filter(w => w.trainerId === session.id);
+  document.getElementById("totalSuggestions").textContent = mine.length;
+}
+
+// ── Send Suggestion ───────────────────────────────────────────
+function sendSuggestion() {
+  const title    = document.getElementById("wTitle").value.trim();
+  const type     = document.getElementById("wType").value;
+  const desc     = document.getElementById("wDesc").value.trim();
+  const clientId = document.getElementById("targetClient").value;
+
+  if (!title) { alert("Please enter a workout title."); return; }
+
+  const workouts = getWorkouts();
+  workouts.unshift({
+    id:          Date.now().toString(),
+    trainerId:   session.id,
+    clientId:    clientId,           // "all" or specific client id
+    title,
+    type,
+    description: desc,
+    createdAt:   Date.now()
+  });
+  saveWorkouts(workouts);
+
+  document.getElementById("wTitle").value = "";
+  document.getElementById("wDesc").value  = "";
+
+  const msg = document.getElementById("successMsg");
+  msg.style.display = "block";
+  setTimeout(() => msg.style.display = "none", 3000);
+
+  renderRecent();
+  updateStats();
+  window.location.href = 'workout-suggestion.html';
+
+}
+
+// ── Render recent suggestions ─────────────────────────────────
+function renderRecent() {
+  const mine = getWorkouts()
+    .filter(w => w.trainerId === session.id)
+    .slice(0, 8);
+
+  const container = document.getElementById("recentSuggestions");
+  if (mine.length === 0) {
+    container.innerHTML = '<p class="no-sug">No suggestions sent yet.</p>';
+    return;
+  }
+
+  const users = myClients;
+  container.innerHTML = mine.map(w => {
+    const target = w.clientId === "all"
+      ? "All Clients"
+      : (u => u ? u.firstname + " " + u.lastname : "?")(users.find(u => u.id === w.clientId));
+    return `
+    <div class="sug-item" id="sug-${w.id}">
+      <div class="sug-header">
+        <strong>${w.title}</strong>
+        <span class="sug-tag">${w.type}</span>
+      </div>
+      <div class="sug-meta">To: ${target} &nbsp;·&nbsp; ${new Date(w.createdAt).toLocaleDateString()}</div>
+      <div style="margin-top:8px;display:flex;gap:6px;">
+        <button class="sug-del" onclick="deleteSuggestion('${w.id}')">🗑 Delete</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function deleteSuggestion(id) {
+  const workouts = getWorkouts().filter(w => w.id !== id);
+  saveWorkouts(workouts);
+  renderRecent();
+  updateStats();
+}
+
+// ── Render client cards ───────────────────────────────────────
+function renderClients() {
+  const clients = getMyClients();
+  const grid    = document.getElementById("clientsGrid");
+
+  if (clients.length === 0) {
+    grid.innerHTML = '<p class="empty-clients">No clients assigned to you yet.</p>';
+    return;
+  }
+
+  grid.innerHTML = clients.map(c => {
+    const ini = (c.firstname[0] + c.lastname[0]).toUpperCase();
+    return `
+    <div class="client-card">
+      <div class="av">${ini}</div>
+      <div class="client-info">
+        <h4>${c.firstname} ${c.lastname}</h4>
+        <div class="uname">@${c.username}</div>
+        <div class="meta">${c.gender || ""} · Age ${c.age || "?"}</div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <button class="chat-btn" style="background:var(--surface2); color:var(--text); border:1px solid var(--border);" onclick="openAnalytics('${c.id}', '${c.firstname}')">📈 Analytics</button>
+        <button class="chat-btn" onclick="goChat('${c.id}','${c.firstname} ${c.lastname}')">💬 Chat</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ── Analytics ──────────────────────────────────────────────────
+let currentAnalyticsClient = null;
+let clientMeasurements = { weights: [], bmis: [] };
+let clientChartInstance = null;
+
+async function openAnalytics(clientId, clientName) {
+  currentAnalyticsClient = clientId;
+  document.getElementById("analyticsTitle").textContent = "📊 Analytics: " + clientName;
+  document.getElementById("clientAnalytics").style.display = "block";
+  document.getElementById("goalAlert").style.display = "none";
+  document.getElementById("clientAnalytics").scrollIntoView({ behavior: 'smooth' });
+
+  const token = localStorage.getItem("fittrack_token");
+  const authHeaders = { "Authorization": "Bearer " + token, "Content-Type": "application/json" };
+
+  // Fetch measurements using direct fetch (FitTrackDB is NOT loaded on this page)
+  try {
+    const mRes = await fetch(`http://localhost:3000/api/progress/client/${clientId}/measurements`, { headers: authHeaders });
+    if (mRes.ok) {
+      clientMeasurements = await mRes.json();
+    } else {
+      console.error("Failed to fetch measurements:", mRes.status);
+      clientMeasurements = { weights: [], bmis: [] };
+    }
+  } catch(err) {
+    console.error("Error fetching measurements:", err);
+    clientMeasurements = { weights: [], bmis: [] };
+  }
+
+  console.log("Loaded measurements:", clientMeasurements.weights.length, "weights,", clientMeasurements.bmis.length, "bmis");
+
+  // Update Chart
+  updateAnalyticsChart();
+
+  // Check goals
+  try {
+    const gRes = await fetch(`http://localhost:3000/api/goals/${clientId}`, { headers: authHeaders });
+    if (gRes.ok) {
+      const goals = await gRes.json();
+      if (goals && goals.length > 0) {
+        const wGoal = goals.find(g => g.metric === 'weight');
+        if (wGoal && clientMeasurements.weights.length > 0) {
+          const latest = clientMeasurements.weights[clientMeasurements.weights.length - 1];
+          if (latest.kg <= wGoal.target_value) {
+            document.getElementById("goalAlert").style.display = "block";
+            document.getElementById("goalAlert").textContent = `🎯 ${clientName} has reached their target weight of ${wGoal.target_value}kg!`;
+          }
+        }
+      }
+    }
+  } catch(err) {
+    console.error("Error fetching goals:", err);
+  }
+}
+
+function closeAnalytics() {
+  document.getElementById("clientAnalytics").style.display = "none";
+}
+
+function updateAnalyticsChart() {
+  const metric = document.getElementById("aMetric").value;
+  const range = document.getElementById("aRange").value;
+  
+  let dataPoints = metric === 'weight' ? clientMeasurements.weights : clientMeasurements.bmis;
+  
+  if (range !== 'all') {
+    const days = parseInt(range);
+    const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+    dataPoints = dataPoints.filter(d => d.ts >= cutoff);
+  }
+
+  const labels = dataPoints.map(d => new Date(d.ts).toLocaleDateString());
+  const values = dataPoints.map(d => metric === 'weight' ? d.kg : d.bmi);
+
+  if (clientChartInstance) clientChartInstance.destroy();
+
+  const ctx = document.getElementById("clientChart");
+  clientChartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: metric === 'weight' ? 'Weight (kg)' : 'BMI',
+        data: values,
+        borderColor: "#fbbf24",
+        backgroundColor: "rgba(251,191,36,0.1)",
+        borderWidth: 2,
+        pointBackgroundColor: "#fbbf24",
+        pointRadius: 5,
+        fill: true,
+        tension: 0.2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: { grid: { color: "#1e1e22" }, ticks: { color: "#71717a" } },
+        y: { grid: { color: "#1e1e22" }, ticks: { color: "#71717a" } }
+      }
+    }
+  });
+}
+
+function exportPNG() {
+  if(!clientChartInstance) return;
+  const link = document.createElement('a');
+  link.download = 'client-analytics.png';
+  link.href = document.getElementById("clientChart").toDataURL('image/png');
+  link.click();
+}
+
+function exportCSV() {
+  const metric = document.getElementById("aMetric").value;
+  const range = document.getElementById("aRange").value;
+  
+  let dataPoints = metric === 'weight' ? clientMeasurements.weights : clientMeasurements.bmis;
+  
+  // Apply the same time range filter
+  if (range !== 'all') {
+    const days = parseInt(range);
+    const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+    dataPoints = dataPoints.filter(d => d.ts >= cutoff);
+  }
+
+  if(!dataPoints || dataPoints.length === 0) {
+    alert("No data to export");
+    return;
+  }
+  
+  let csvContent = "data:text/csv;charset=utf-8,Date," + (metric === 'weight' ? "Weight (kg)" : "BMI") + "\\n";
+  dataPoints.forEach(d => {
+    let date = new Date(d.ts).toLocaleDateString();
+    let val = metric === 'weight' ? d.kg : d.bmi;
+    csvContent += date + "," + val + "\\n";
+  });
+  
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "client_data.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function goChat(clientId, clientName) {
+  localStorage.setItem("fittrack_chat_target", JSON.stringify({ id: clientId, name: clientName }));
+  window.location.href = "chat.html";
+}
+
+function logout() {
+  localStorage.removeItem("fittrack_session");
+  localStorage.removeItem("fittrack_token");
+  localStorage.removeItem("isLoggedIn");
+  localStorage.removeItem("fittrack_chat_target");
+  window.location.href = "index.html";
+}
+
+// ── Chart ─────────────────────────────────────────────────────
+new Chart(document.getElementById("activityChart"), {
+  type: "bar",
+  data: {
+    labels: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
+    datasets: [
+      { label:"Active Clients", data:[3,5,4,6,5,7,4], backgroundColor:"rgba(251,191,36,0.75)", borderRadius:7, borderSkipped:false },
+      { label:"Suggestions",    data:[1,2,1,3,2,3,1], backgroundColor:"rgba(96,165,250,0.5)",   borderRadius:7, borderSkipped:false }
+    ]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:true,
+    plugins:{legend:{labels:{color:"#71717a",font:{family:"DM Sans"}}},tooltip:{backgroundColor:"#18181b",borderColor:"#27272a",borderWidth:1,cornerRadius:8}},
+    scales:{
+      x:{grid:{color:"#1e1e22"},ticks:{color:"#71717a"}},
+      y:{grid:{color:"#1e1e22"},ticks:{color:"#71717a"}}
+    }
+  }
+});
+
+// ── Boot ──────────────────────────────────────────────────────
+fetchClients();
+</script>
+</body>
+</html>

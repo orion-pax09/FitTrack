@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FitTrack – Admin Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="../../backend/config/fittrack-db.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #070709;
+      --sidebar: #0c0c0f;
+      --surface: #121216;
+      --surface2: #1a1a22;
+      --border: #22222c;
+      --border2: #2e2e3d;
+      --text: #f4f4fa;
+      --muted: #8e8e9f;
+      --red: #ef4444;
+      --red-hover: #dc2626;
+      --red-dim: rgba(239, 68, 68, 0.12);
+      --green: #22c55e;
+      --green-dim: rgba(34, 197, 94, 0.12);
+      --blue: #3b82f6;
+      --blue-dim: rgba(59, 130, 246, 0.12);
+      --purple: #a855f7;
+      --yellow: #fbbf24;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      overflow-x: hidden;
+    }
+
+    /* ─── SIDEBAR ─── */
+    .sidebar {
+      position: fixed; left: 0; top: 0;
+      width: 260px; height: 100vh;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      padding: 24px 16px; z-index: 100;
+    }
+    .logo-wrap { display: flex; align-items: center; gap: 12px; padding: 0 8px; margin-bottom: 32px; }
+    .logo-icon { 
+      width: 40px; height: 40px; background: var(--red); border-radius: 10px; 
+      display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; 
+    }
+    .logo-text { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; letter-spacing: 2px; }
+    .logo-text span { color: var(--red); }
+    .logo-sub { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+
+    .menu { list-style: none; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .menu li {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 14px; border-radius: 10px;
+      color: var(--muted); cursor: pointer; font-size: 13.5px; font-weight: 500; transition: all .2s;
+    }
+    .menu li:hover { background: var(--surface2); color: var(--text); }
+    .menu li.active { background: var(--red); color: #fff; font-weight: 700; }
+    .menu li .icon { font-size: 15px; width: 18px; text-align: center; }
+
+    .admin-profile {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-top: auto;
+    }
+    .admin-profile .aname { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+    .admin-profile .arole { font-size: 11px; color: var(--red); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* ─── MAIN CONTENT ─── */
+    .main { margin-left: 260px; flex: 1; padding: 32px 28px; overflow-y: auto; display: flex; flex-direction: column; }
+
+    .logout-btn {
+      position: fixed; top: 16px; right: 20px;
+      background: var(--red); color: #fff; font-weight: 700; font-size: 13px;
+      padding: 9px 20px; border-radius: 8px; border: none; cursor: pointer; z-index: 200;
+      font-family: 'DM Sans', sans-serif; transition: background .2s;
+    }
+    .logout-btn:hover { background: var(--red-hover); }
+
+    .page-header { margin-bottom: 28px; }
+    .page-header h1 { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; margin-bottom: 4px; }
+    .page-header p { color: var(--muted); font-size: .9rem; }
+
+    /* ─── STATS GRID ─── */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    @media(max-width: 1100px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media(max-width: 600px) { .stats-grid { grid-template-columns: 1fr; } }
+
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px;
+      transition: transform .2s, border-color .2s;
+    }
+    .stat-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+    .stat-card.red { background: linear-gradient(135deg, var(--red), #991b1b); border: none; color: #fff; }
+    .sc-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .sc-icon { width: 38px; height: 38px; border-radius: 9px; background: var(--red-dim); display: flex; align-items: center; justify-content: center; font-size: 17px; }
+    .stat-card.red .sc-icon { background: rgba(0, 0, 0, 0.2); }
+    .sc-val { font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+    .sc-label { font-size: .8rem; color: var(--muted); }
+    .stat-card.red .sc-label { color: rgba(255, 255, 255, 0.7); }
+
+    /* ─── TABS ─── */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeUp .4s ease both; }
+
+    /* ─── CARDS & SECTIONS ─── */
+    .card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 24px;
+    }
+    .card h3 { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+
+    /* Charts Grid */
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+    @media(max-width: 900px) { .charts-grid { grid-template-columns: 1fr; } }
+
+    /* ─── FORMS & CONTROLS ─── */
+    .form-row { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+    .form-group { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 6px; }
+    .form-group.action-group { flex: 0; min-width: auto; justify-content: flex-end; }
+    label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+    input, select, textarea {
+      background: #09090c; border: 1px solid var(--border2); border-radius: 9px;
+      padding: 11px 14px; color: var(--text); font-size: 14px; font-family: 'DM Sans', sans-serif;
+      outline: none; transition: border-color .2s, box-shadow .2s;
+    }
+    input:focus, select:focus, textarea:focus { 
+      border-color: var(--red); box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15); 
+    }
+    select option { background: var(--surface); }
+
+    .btn {
+      padding: 11px 20px; background: var(--red); color: #fff; font-weight: 700; font-size: 14px;
+      font-family: 'DM Sans', sans-serif; border: none; border-radius: 9px; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: background .2s, opacity .2s;
+    }
+    .btn:hover { background: var(--red-hover); }
+    .btn.secondary { background: var(--surface2); border: 1px solid var(--border2); color: var(--text); }
+    .btn.secondary:hover { background: var(--border); }
+    .btn.danger { background: rgba(239, 68, 68, 0.15); color: var(--red); border: 1px solid rgba(239, 68, 68, 0.2); }
+    .btn.danger:hover { background: var(--red); color: #fff; }
+    .btn.success { background: rgba(34, 197, 94, 0.15); color: var(--green); border: 1px solid rgba(34, 197, 94, 0.2); }
+    .btn.success:hover { background: var(--green); color: #fff; }
+
+    /* ─── TABLES ─── */
+    .table-container { width: 100%; overflow-x: auto; margin-top: 14px; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13.5px; }
+    th { padding: 12px 16px; border-bottom: 2px solid var(--border); color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+    td { padding: 14px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:hover td { background: rgba(255, 255, 255, 0.01); }
+
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+    }
+    .badge.client { background: var(--blue-dim); color: var(--blue); }
+    .badge.trainer { background: rgba(168, 85, 247, 0.12); color: var(--purple); }
+    .badge.active { background: var(--green-dim); color: var(--green); }
+    .badge.inactive { background: var(--red-dim); color: var(--red); }
+    .badge.plan-premium { background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(217, 119, 6, 0.15)); color: var(--yellow); border: 1px solid rgba(251, 191, 36, 0.2); }
+    .badge.plan-standard { background: rgba(59, 130, 246, 0.15); color: var(--blue); border: 1px solid rgba(59, 130, 246, 0.2); }
+    .badge.plan-basic { background: rgba(142, 142, 159, 0.15); color: var(--muted); border: 1px solid rgba(142, 142, 159, 0.2); }
+
+    .no-data { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; }
+
+    /* ─── MODAL ─── */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px);
+      z-index: 1000; display: none; align-items: center; justify-content: center;
+    }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+      width: 100%; max-width: 500px; padding: 28px; display: flex; flex-direction: column; gap: 20px;
+      animation: zoomIn .3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; }
+    .modal-header h3 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.2rem; }
+    .modal-close { background: none; border: none; font-size: 20px; color: var(--muted); cursor: pointer; }
+    .modal-close:hover { color: var(--text); }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px; }
+
+    /* ─── TUTORIALS ─── */
+    .tutorials-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-top: 20px; }
+    .tutorial-card {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+      display: flex; flex-direction: column; transition: border-color .2s;
+    }
+    .tutorial-card:hover { border-color: var(--border2); }
+    .t-thumb { width: 100%; height: 160px; background: #000; position: relative; overflow: hidden; }
+    .t-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .t-thumb .t-play {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 48px; height: 48px; background: var(--red); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 18px; color: #fff;
+    }
+    .t-info { padding: 18px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .t-title { font-weight: 700; font-size: 15px; }
+    .t-desc { font-size: 12.5px; color: var(--muted); line-height: 1.5; flex: 1; }
+    .t-meta { display: flex; justify-content: space-between; align-items: center; font-size: 11px; margin-top: 10px; }
+    .t-cat { text-transform: uppercase; font-weight: 700; color: var(--red); }
+
+    /* ─── ANIMATIONS ─── */
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes zoomIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+    .stat-card:nth-child(1) { animation-delay: .05s; }
+    .stat-card:nth-child(2) { animation-delay: .1s; }
+    .stat-card:nth-child(3) { animation-delay: .15s; }
+    .stat-card:nth-child(4) { animation-delay: .2s; }
+  </style>
+</head>
+<body>
+
+<button class="logout-btn" onclick="FitTrackDB.logout()">Logout</button>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo-wrap">
+    <div class="logo-icon">🛡️</div>
+    <div>
+      <div class="logo-text">FIT<span>TRACK</span></div>
+      <div class="logo-sub">ADMIN PORTAL</div>
+    </div>
+  </div>
+
+  <ul class="menu">
+    <li class="active" onclick="switchTab('dashboard', this)"><span class="icon">🏠</span> Dashboard</li>
+    <li onclick="switchTab('users', this)"><span class="icon">👥</span> Users</li>
+    <li onclick="switchTab('memberships', this)"><span class="icon">💳</span> Memberships</li>
+    <li onclick="switchTab('tutorials', this)"><span class="icon">🎥</span> Videos</li>
+  </ul>
+
+  <div class="admin-profile">
+    <div class="aname" id="adminName">Admin</div>
+    <div class="arole">⚡ Administrator</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="page-header">
+    <h1 id="pageTitle">Admin Dashboard</h1>
+    <p id="pageSubtitle">System statistics, user assignments, memberships, and workout videos</p>
+  </div>
+
+  <!-- STATS GRID -->
+  <div class="stats-grid">
+    <div class="stat-card red">
+      <div class="sc-top"><div class="sc-icon">👥</div></div>
+      <div class="sc-val" id="statUsers">0</div>
+      <div class="sc-label">Total Users</div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-top"><div class="sc-icon">🏋️</div></div>
+      <div class="sc-val" id="statTrainers">0</div>
+      <div class="sc-label">Trainers</div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-top"><div class="sc-icon">🏃</div></div>
+      <div class="sc-val" id="statClients">0</div>
+      <div class="sc-label">Clients</div>
+    </div>
+    <div class="stat-card">
+      <div class="sc-top"><div class="sc-icon">💳</div></div>
+      <div class="sc-val" id="statMemberships">0</div>
+      <div class="sc-label">Active Plans</div>
+    </div>
+  </div>
+
+  <!-- TAB: DASHBOARD -->
+  <div id="tab-dashboard" class="tab-content active">
+    <div class="charts-grid">
+      <div class="card">
+        <h3>📈 User Registration Growth</h3>
+        <canvas id="userGrowthChart" height="200"></canvas>
+      </div>
+      <div class="card">
+        <h3>📊 Membership Plan Distribution</h3>
+        <div style="max-height: 200px; display: flex; justify-content: center;">
+          <canvas id="planChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="charts-grid">
+      <div class="card">
+        <h3>👥 Trainer Workload (Clients Assigned)</h3>
+        <canvas id="trainerWorkloadChart" height="200"></canvas>
+      </div>
+      <div class="card">
+        <h3>💪 System Workout Completion Trend</h3>
+        <canvas id="workoutTrendChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: USERS -->
+  <div id="tab-users" class="tab-content">
+    <div class="card">
+      <h3>👥 Manage Users & Assignments</h3>
+      <div class="form-row">
+        <div class="form-group" style="flex: 2;">
+          <label for="userSearch">Search Users</label>
+          <input type="text" id="userSearch" placeholder="Search by name, username, or email..." oninput="loadUsers()" />
+        </div>
+        <div class="form-group">
+          <label for="userRoleFilter">Filter By Role</label>
+          <select id="userRoleFilter" onchange="loadUsers()">
+            <option value="">All Roles</option>
+            <option value="client">Clients</option>
+            <option value="trainer">Trainers</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Assigned Trainer</th>
+              <th>Created At</th>
+              <th style="text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: MEMBERSHIPS -->
+  <div id="tab-memberships" class="tab-content">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h3 style="margin:0;">💳 Client Membership Plans</h3>
+        <button class="btn" onclick="openMembershipModal()">➕ Add / Update Membership</button>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Client Name</th>
+              <th>Email</th>
+              <th>Current Plan</th>
+              <th>Start Date</th>
+              <th>End Date</th>
+              <th>Status</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="membershipsTableBody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: VIDEOS -->
+  <div id="tab-tutorials" class="tab-content">
+    <div class="card">
+      <h3>🎥 Add New Tutorial Video</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="vTitle">Video Title</label>
+          <input type="text" id="vTitle" placeholder="e.g. How to Perfect Your Squat Form" />
+        </div>
+        <div class="form-group">
+          <label for="vCategory">Category</label>
+          <select id="vCategory">
+            <option value="Strength">Strength</option>
+            <option value="Cardio">Cardio</option>
+            <option value="HIIT">HIIT</option>
+            <option value="Yoga">Yoga</option>
+            <option value="Nutrition">Nutrition</option>
+            <option value="Recovery">Recovery</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="vSourceType">Video Source</label>
+          <select id="vSourceType" onchange="toggleVideoSource()">
+            <option value="youtube">YouTube Link</option>
+            <option value="local">Local Video File</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row" id="youtubeInputGroup">
+        <div class="form-group" style="flex: 2;">
+          <label for="vUrl">YouTube Video URL</label>
+          <input type="text" id="vUrl" placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ" />
+        </div>
+      </div>
+      <div class="form-row" id="localInputGroup" style="display: none;">
+        <div class="form-group" style="flex: 2;">
+          <label for="vFile">Select Video File</label>
+          <input type="file" id="vFile" accept="video/*" style="border: 1px solid var(--border2); padding: 9px 12px; background: #09090c; border-radius: 9px; color: var(--text);" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="vDesc">Description</label>
+          <textarea id="vDesc" rows="3" placeholder="Brief instruction about the exercises..."></textarea>
+        </div>
+      </div>
+      <button class="btn" onclick="addTutorial()">✅ Upload Video</button>
+    </div>
+
+    <div class="card">
+      <h3>📋 Exercise Tutorial Videos</h3>
+      <div class="tutorials-grid" id="tutorialsGrid">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- MODAL: ASSIGN TRAINER -->
+<div class="modal-overlay" id="trainerModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Assign Trainer</h3>
+      <button class="modal-close" onclick="closeModal('trainerModal')">&times;</button>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:16px;">
+      <input type="hidden" id="assignClientId" />
+      <p style="font-size:14px; color:var(--muted)">Assign or change the trainer for <strong id="assignClientName" style="color:var(--text)"></strong>.</p>
+      
+      <div class="form-group">
+        <label for="trainerSelect">Select Trainer</label>
+        <select id="trainerSelect">
+          <!-- Dynamically populated -->
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn secondary" onclick="closeModal('trainerModal')">Cancel</button>
+      <button class="btn" onclick="saveTrainerAssignment()">Assign Trainer</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD/UPDATE MEMBERSHIP -->
+<div class="modal-overlay" id="membershipModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Add / Update Membership</h3>
+      <button class="modal-close" onclick="closeModal('membershipModal')">&times;</button>
+    </div>
+    <div style="display:flex; flex-direction:column; gap:16px;">
+      <div class="form-group">
+        <label for="memberClientSelect">Select Client</label>
+        <select id="memberClientSelect">
+          <!-- Clients dropdown -->
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="memberPlan">Plan Type</label>
+        <select id="memberPlan">
+          <option value="Basic">Basic</option>
+          <option value="Standard">Standard</option>
+          <option value="Premium">Premium</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="memberStart">Start Date</label>
+          <input type="date" id="memberStart" />
+        </div>
+        <div class="form-group">
+          <label for="memberEnd">End Date</label>
+          <input type="date" id="memberEnd" readonly style="background:#1a1a22; color:var(--muted); cursor:not-allowed;" />
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn secondary" onclick="closeModal('membershipModal')">Cancel</button>
+      <button class="btn" onclick="saveMembership()">Save Membership</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ─── AUTH GUARD ───
+  const session = FitTrackDB.getSession();
+  if (!session || session.role !== "admin") {
+    window.location.href = "index.html";
+  }
+
+  document.getElementById("adminName").textContent = (session.firstname || "") + " " + (session.lastname || "");
+
+  // Global variables
+  let trainersList = [];
+  let clientsList = [];
+  let allClientsList = [];
+  let charts = {};
+
+  // Tab switching
+  function switchTab(tabId, el) {
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.menu li').forEach(l => l.classList.remove('active'));
+    
+    document.getElementById('tab-' + tabId).classList.add('active');
+    el.classList.add('active');
+
+    // Update title/subtitles
+    const titleEl = document.getElementById("pageTitle");
+    const subEl = document.getElementById("pageSubtitle");
+    
+    if (tabId === 'dashboard') {
+      titleEl.textContent = "Admin Dashboard";
+      subEl.textContent = "System statistics, user growth, and exercise completions reports";
+      loadDashboardData();
+    } else if (tabId === 'users') {
+      titleEl.textContent = "User Management";
+      subEl.textContent = "Assign trainers to clients, search all trainers and clients in the system";
+      loadUsers();
+    } else if (tabId === 'memberships') {
+      titleEl.textContent = "Membership Management";
+      subEl.textContent = "Manage client premium plans, active cycles, and subscriptions";
+      loadMemberships();
+    } else if (tabId === 'tutorials') {
+      titleEl.textContent = "Workout Video Library";
+      subEl.textContent = "Upload new video tutorials and manage the fitness media library";
+      loadTutorials();
+    }
+  }
+
+  // Fetch trainers for dropdowns
+  async function fetchTrainers() {
+    try {
+      const token = localStorage.getItem("fittrack_token");
+      const res = await fetch("http://localhost:3000/api/auth/trainers", {
+        headers: { "Authorization": "Bearer " + token }
+      });
+      if (res.ok) {
+        trainersList = await res.json();
+        
+        // Populate assign trainer select
+        const ts = document.getElementById("trainerSelect");
+        ts.innerHTML = '<option value="">❌ Unassign Trainer</option>';
+        trainersList.forEach(t => {
+          const opt = document.createElement("option");
+          opt.value = t.id;
+          opt.textContent = `${t.firstname} ${t.lastname} (@${t.username})`;
+          ts.appendChild(opt);
+        });
+      }
+    } catch(err) {
+      console.error("Error fetching trainers:", err);
+    }
+  }
+
+  // Open/Close Modals
+  function openModal(id) {
+    document.getElementById(id).style.display = "flex";
+  }
+  function closeModal(id) {
+    document.getElementById(id).style.display = "none";
+  }
+
+  // ─── DASHBOARD OVERVIEW ───
+  async function loadDashboardData() {
+    try {
+      // 1. Fetch Stats
+      const stats = await FitTrackDB.getAdminStats();
+      document.getElementById("statUsers").textContent = stats.totalUsers || 0;
+      document.getElementById("statTrainers").textContent = stats.totalTrainers || 0;
+      document.getElementById("statClients").textContent = stats.totalClients || 0;
+      document.getElementById("statMemberships").textContent = stats.activeMemberships || 0;
+
+      // 2. Fetch Reports & Render Charts
+      const reports = await FitTrackDB.getAdminReports();
+      renderReportsCharts(reports);
+    } catch(err) {
+      console.error("Error loading dashboard stats/reports:", err);
+    }
+  }
+
+  function renderReportsCharts(data) {
+    // Destroy previous charts if they exist
+    Object.keys(charts).forEach(key => {
+      if (charts[key]) charts[key].destroy();
+    });
+
+    // Chart Options Helper
+    const commonOptions = {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { labels: { color: "#8e8e9f", font: { family: "DM Sans", size: 11 } } }
+      },
+      scales: {
+        x: { grid: { color: "#1c1c24" }, ticks: { color: "#8e8e9f", font: { family: "DM Sans", size: 10 } } },
+        y: { grid: { color: "#1c1c24" }, ticks: { color: "#8e8e9f", font: { family: "DM Sans", size: 10 } } }
+      }
+    };
+
+    // Chart 1: User Growth
+    const ugLabels = data.userGrowth.map(d => d.date);
+    const ugValues = data.userGrowth.map(d => d.count);
+    charts.userGrowth = new Chart(document.getElementById("userGrowthChart"), {
+      type: 'line',
+      data: {
+        labels: ugLabels.length ? ugLabels : ["None"],
+        datasets: [{
+          label: 'New Registrations',
+          data: ugValues.length ? ugValues : [0],
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          fill: true,
+          tension: 0.3,
+          borderWidth: 2
+        }]
+      },
+      options: commonOptions
+    });
+
+    // Chart 2: Plan Distribution
+    const planLabels = data.planDistribution.map(d => d.plan);
+    const planValues = data.planDistribution.map(d => d.count);
+    charts.plan = new Chart(document.getElementById("planChart"), {
+      type: 'doughnut',
+      data: {
+        labels: planLabels.length ? planLabels : ["No Plans"],
+        datasets: [{
+          data: planValues.length ? planValues : [1],
+          backgroundColor: ['#fbbf24', '#3b82f6', '#a855f7', '#8e8e9f'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right', labels: { color: "#8e8e9f", font: { family: "DM Sans", size: 11 } } }
+        }
+      }
+    });
+
+    // Chart 3: Trainer Workload
+    const twLabels = data.trainerWorkload.map(d => d.trainer_name);
+    const twValues = data.trainerWorkload.map(d => d.client_count);
+    charts.trainerWorkload = new Chart(document.getElementById("trainerWorkloadChart"), {
+      type: 'bar',
+      data: {
+        labels: twLabels.length ? twLabels : ["No Trainers"],
+        datasets: [{
+          label: 'Assigned Clients',
+          data: twValues.length ? twValues : [0],
+          backgroundColor: 'rgba(59, 130, 246, 0.7)',
+          borderRadius: 6
+        }]
+      },
+      options: commonOptions
+    });
+
+    // Chart 4: Workout completion trends
+    const wcLabels = data.workoutCompletions.map(d => d.date);
+    const wcValues = data.workoutCompletions.map(d => d.count);
+    charts.workoutTrend = new Chart(document.getElementById("workoutTrendChart"), {
+      type: 'line',
+      data: {
+        labels: wcLabels.length ? wcLabels : ["None"],
+        datasets: [{
+          label: 'Completed Workouts',
+          data: wcValues.length ? wcValues : [0],
+          borderColor: '#22c55e',
+          backgroundColor: 'rgba(34, 197, 94, 0.1)',
+          fill: true,
+          tension: 0.3,
+          borderWidth: 2
+        }]
+      },
+      options: commonOptions
+    });
+  }
+
+  // ─── USER MANAGEMENT ───
+  async function loadUsers() {
+    try {
+      const search = document.getElementById("userSearch").value.trim();
+      const role = document.getElementById("userRoleFilter").value;
+
+      const users = await FitTrackDB.getAdminUsers(role, search);
+      const tbody = document.getElementById("usersTableBody");
+      
+      if (users.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="no-data">No users found.</td></tr>`;
+        return;
+      }
+
+      // Track clients list for membership setup dropdown
+      clientsList = users.filter(u => u.role === 'client');
+      populateClientDropdown();
+
+      tbody.innerHTML = users.map(u => {
+        const assignedTrainerText = u.role === 'client' 
+          ? (u.trainer_name ? `⚡ ${u.trainer_name}` : '<span style="color:var(--muted)">None Assigned</span>')
+          : '<span style="color:var(--muted)">N/A (Trainer)</span>';
+        
+        const actionButton = u.role === 'client'
+          ? `<button class="btn secondary" style="padding: 6px 12px; font-size:12px;" onclick="openAssignTrainerModal(${u.id}, '${u.firstname} ${u.lastname}', ${u.assigned_trainer_id})">🔗 Assign Trainer</button>`
+          : '';
+
+        return `
+          <tr>
+            <td><strong>${u.firstname} ${u.lastname}</strong></td>
+            <td>@${u.username}</td>
+            <td>${u.email}</td>
+            <td><span class="badge ${u.role}">${u.role}</span></td>
+            <td>${assignedTrainerText}</td>
+            <td>${new Date(u.created_at || Date.now()).toLocaleDateString()}</td>
+            <td style="text-align: right;">${actionButton}</td>
+          </tr>
+        `;
+      }).join('');
+    } catch(err) {
+      console.error("Error loading users:", err);
+    }
+  }
+
+  function openAssignTrainerModal(clientId, clientName, currentTrainerId) {
+    document.getElementById("assignClientId").value = clientId;
+    document.getElementById("assignClientName").textContent = clientName;
+    document.getElementById("trainerSelect").value = currentTrainerId || "";
+    openModal("trainerModal");
+  }
+
+  async function saveTrainerAssignment() {
+    const clientId = document.getElementById("assignClientId").value;
+    const trainerId = document.getElementById("trainerSelect").value;
+    
+    try {
+      await FitTrackDB.assignTrainer(clientId, trainerId);
+      closeModal("trainerModal");
+      loadUsers();
+      loadDashboardData(); // Update workload stats
+    } catch(err) {
+      alert(err.message || "Failed to assign trainer.");
+    }
+  }
+
+  function populateClientDropdown() {
+    const cs = document.getElementById("memberClientSelect");
+    cs.innerHTML = '';
+    allClientsList.forEach(c => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = `${c.firstname} ${c.lastname} (${c.email})`;
+      cs.appendChild(opt);
+    });
+  }
+
+  // ─── MEMBERSHIP PLANS ───
+  async function loadMemberships() {
+    try {
+      const memberships = await FitTrackDB.getMemberships();
+      const tbody = document.getElementById("membershipsTableBody");
+
+      if (memberships.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="no-data">No memberships found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = memberships.map(m => {
+        const planClass = `plan-${m.plan.toLowerCase()}`;
+        const statusClass = m.is_active ? 'active' : 'inactive';
+        const statusText = m.is_active ? 'Active' : 'Expired / Cancelled';
+        
+        const deactivateBtn = m.is_active && m.id
+          ? `<button class="btn danger" style="padding: 6px 12px; font-size:12px;" onclick="deactivateMembership(${m.id})">❌ Deactivate</button>`
+          : '';
+
+        return `
+          <tr>
+            <td><strong>${m.firstname} ${m.lastname}</strong></td>
+            <td>${m.email}</td>
+            <td><span class="badge ${planClass}">${m.plan}</span></td>
+            <td>${m.start_date ? new Date(m.start_date).toLocaleDateString() : '—'}</td>
+            <td>${m.end_date ? new Date(m.end_date).toLocaleDateString() : '—'}</td>
+            <td><span class="badge ${statusClass}">${statusText}</span></td>
+            <td style="text-align: right; display:flex; gap:6px; justify-content:flex-end;">
+              <button class="btn secondary" style="padding: 6px 12px; font-size:12px;" onclick="openEditMembershipModal(${m.user_id}, '${m.plan}', '${m.start_date}', '${m.end_date}')">✏️ Edit</button>
+              ${deactivateBtn}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    } catch(err) {
+      console.error("Error loading memberships:", err);
+    }
+  }
+
+  // Set up event listener for auto-calculating 2 months (60 days) membership end date
+  document.addEventListener("DOMContentLoaded", () => {
+    const startInput = document.getElementById("memberStart");
+    if (startInput) {
+      startInput.addEventListener("change", function() {
+        const startVal = this.value;
+        if (startVal) {
+          const startDate = new Date(startVal);
+          const endDate = new Date(startDate.getTime() + 60 * 24 * 60 * 60 * 1000);
+          document.getElementById("memberEnd").value = endDate.toISOString().split('T')[0];
+        }
+      });
+    }
+  });
+
+  function openMembershipModal() {
+    // Setup defaults: today and +60 days (2 months)
+    const today = new Date().toISOString().split('T')[0];
+    const twoMonthsLater = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    document.getElementById("memberClientSelect").disabled = false;
+    document.getElementById("memberPlan").value = "Basic";
+    document.getElementById("memberStart").value = today;
+    document.getElementById("memberEnd").value = twoMonthsLater;
+    
+    openModal("membershipModal");
+  }
+
+  function openEditMembershipModal(clientId, plan, startDate, endDate) {
+    openMembershipModal();
+    
+    // Lock client dropdown and set fields
+    const cs = document.getElementById("memberClientSelect");
+    cs.value = clientId;
+    cs.disabled = true;
+    
+    document.getElementById("memberPlan").value = plan || "Basic";
+    if (startDate) document.getElementById("memberStart").value = startDate.split('T')[0];
+    if (endDate) document.getElementById("memberEnd").value = endDate.split('T')[0];
+  }
+
+  async function saveMembership() {
+    const userId = document.getElementById("memberClientSelect").value;
+    const plan = document.getElementById("memberPlan").value;
+    const startDate = document.getElementById("memberStart").value;
+    const endDate = document.getElementById("memberEnd").value;
+
+    if (!userId || !startDate || !endDate) {
+      alert("Please fill all required fields.");
+      return;
+    }
+
+    try {
+      await FitTrackDB.saveMembership({ userId, plan, startDate, endDate });
+      closeModal("membershipModal");
+      loadMemberships();
+      loadDashboardData(); // Update plans chart
+    } catch(err) {
+      alert(err.message || "Failed to update membership.");
+    }
+  }
+
+  async function deactivateMembership(id) {
+    if (!confirm("Are you sure you want to deactivate this membership?")) return;
+    try {
+      await FitTrackDB.deactivateMembership(id);
+      loadMemberships();
+      loadDashboardData();
+    } catch(err) {
+      alert(err.message || "Failed to deactivate membership.");
+    }
+  }
+
+  // ─── VIDEOS (TUTORIALS) ───
+  function toggleVideoSource() {
+    const sourceType = document.getElementById("vSourceType").value;
+    if (sourceType === "youtube") {
+      document.getElementById("youtubeInputGroup").style.display = "flex";
+      document.getElementById("localInputGroup").style.display = "none";
+    } else {
+      document.getElementById("youtubeInputGroup").style.display = "none";
+      document.getElementById("localInputGroup").style.display = "flex";
+    }
+  }
+
+  async function loadTutorials() {
+    try {
+      const tutorials = await FitTrackDB.getAdminTutorials();
+      const grid = document.getElementById("tutorialsGrid");
+      
+      if (tutorials.length === 0) {
+        grid.innerHTML = `<p class="no-data" style="grid-column: 1/-1;">No video tutorials added yet.</p>`;
+        return;
+      }
+
+      grid.innerHTML = tutorials.map(t => {
+        const thumbImg = t.thumbnail_url 
+          ? `<img src="${t.thumbnail_url}" alt="${t.title}" />`
+          : `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; background:linear-gradient(135deg, #1e1e24, #121216); color:var(--red); font-size:24px; gap:8px;">
+               <span>📹</span>
+               <span style="font-size:11px; color:var(--muted); text-transform:uppercase; font-weight:600; letter-spacing:0.5px;">Local Video</span>
+             </div>`;
+
+        return `
+          <div class="tutorial-card">
+            <div class="t-thumb">
+              ${thumbImg}
+              <div class="t-play">▶</div>
+            </div>
+            <div class="t-info">
+              <div class="t-title">${t.title}</div>
+              <div class="t-desc">${t.description || 'No description provided.'}</div>
+              <div class="t-meta">
+                <span class="t-cat">${t.category}</span>
+                <button class="btn danger" style="padding: 5px 10px; font-size:11px;" onclick="deleteTutorial(${t.id})">🗑 Delete</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch(err) {
+      console.error("Error loading tutorials:", err);
+    }
+  }
+
+  async function addTutorial() {
+    const title = document.getElementById("vTitle").value.trim();
+    const category = document.getElementById("vCategory").value;
+    const description = document.getElementById("vDesc").value.trim();
+    const sourceType = document.getElementById("vSourceType").value;
+
+    if (!title) {
+      alert("Title is required.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("title", title);
+    formData.append("category", category);
+    formData.append("description", description);
+
+    if (sourceType === "youtube") {
+      const videoUrl = document.getElementById("vUrl").value.trim();
+      if (!videoUrl) {
+        alert("YouTube URL is required.");
+        return;
+      }
+      formData.append("videoUrl", videoUrl);
+    } else {
+      const fileInput = document.getElementById("vFile");
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert("Please select a video file to upload.");
+        return;
+      }
+      formData.append("videoFile", fileInput.files[0]);
+    }
+
+    try {
+      await FitTrackDB.createTutorial(formData);
+      
+      // Clear fields
+      document.getElementById("vTitle").value = "";
+      document.getElementById("vUrl").value = "";
+      document.getElementById("vDesc").value = "";
+      document.getElementById("vFile").value = "";
+
+      loadTutorials();
+    } catch(err) {
+      alert(err.message || "Failed to create tutorial.");
+    }
+  }
+
+  async function deleteTutorial(id) {
+    if (!confirm("Are you sure you want to delete this tutorial video?")) return;
+    try {
+      await FitTrackDB.deleteTutorial(id);
+      loadTutorials();
+    } catch(err) {
+      alert(err.message || "Failed to delete tutorial.");
+    }
+  }
+
+  // ─── INITIALIZATION ───
+  async function init() {
+    await fetchTrainers();
+    try {
+      allClientsList = await FitTrackDB.getAdminUsers('client');
+      populateClientDropdown();
+    } catch(err) {
+      console.error("Error loading initial clients list:", err);
+    }
+    loadDashboardData();
+  }
+
+  init();
+</script>
+</body>
+</html>
