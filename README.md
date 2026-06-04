@@ -56,7 +56,6 @@ The system is built using a client-server architecture:
 ## 📊 Figma UI Design
 
 👉 UI/UX Design Reference:
-https://YOUR-FIGMA-LINK-HERE
 
 https://www.figma.com/make/5Sl2Huiv15qMF3EMjz4zvX/Gym-Fitness-Management-System?t=2jwAh9vwppbGd4bf-1
 
